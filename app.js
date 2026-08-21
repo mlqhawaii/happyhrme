@@ -69,16 +69,25 @@ function sync(){byId('neighborhoodFilter').value=state.neighborhood;byId('timeFi
 function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();map.setView([21.43,-157.96],10)}
 function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map')setTimeout(()=>map.invalidateSize(),100)}
 
-const map=L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([21.43,-157.96],10);
-const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles © Esri'}).addTo(map);
-const streets=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+const map=L.map('map',{zoomControl:true,scrollWheelZoom:false,preferCanvas:true}).setView([21.43,-157.96],10);
+const streets=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap',crossOrigin:true});
+const satellite=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles © Esri',crossOrigin:true});
+let satelliteErrors=0;
+function showStreets(){if(map.hasLayer(satellite))map.removeLayer(satellite);if(!map.hasLayer(streets))streets.addTo(map);byId('streetBtn').classList.add('active');byId('satelliteBtn').classList.remove('active');requestAnimationFrame(()=>map.invalidateSize(true))}
+function showSatellite(){satelliteErrors=0;if(map.hasLayer(streets))map.removeLayer(streets);if(!map.hasLayer(satellite))satellite.addTo(map);byId('satelliteBtn').classList.add('active');byId('streetBtn').classList.remove('active');requestAnimationFrame(()=>map.invalidateSize(true))}
+satellite.on('tileerror',()=>{satelliteErrors+=1;if(satelliteErrors>=4)showStreets()});
+showSatellite();
 const markerLayer=L.layerGroup().addTo(map);
+map.whenReady(()=>{setTimeout(()=>map.invalidateSize(true),80);setTimeout(()=>map.invalidateSize(true),350)});
+window.addEventListener('load',()=>setTimeout(()=>map.invalidateSize(true),120));
+window.addEventListener('resize',()=>map.invalidateSize(true));
+if('ResizeObserver' in window){new ResizeObserver(()=>map.invalidateSize(true)).observe(byId('map'));}
 function markerIcon(r,count){return L.divIcon({className:'region-marker',html:`<div class="region-pin"><i>⌖</i><span>${r.label}<small>${count} ${count===1?'location':'locations'}</small></span></div>`,iconSize:null})}
 function syncRegionMarkers(list){markerLayer.clearLayers();regions.forEach(r=>{const count=list.filter(v=>v.neighborhood===r.key).length;if(!count&&state.neighborhood!=='all')return;const m=L.marker([r.lat,r.long],{icon:markerIcon(r,count)}).addTo(markerLayer);m.on('click',()=>{state.neighborhood=r.key;sync();render();map.setView([r.lat,r.long],r.zoom)})})}
 function renderCoverage(){const strip=byId('coverageStrip');strip.innerHTML=regions.map(r=>{const count=venues.filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();const r=regions.find(x=>x.key===b.dataset.region);map.setView([r.lat,r.long],r.zoom)}))}
 
-byId('satelliteBtn').onclick=()=>{if(map.hasLayer(streets))map.removeLayer(streets);satellite.addTo(map);byId('satelliteBtn').classList.add('active');byId('streetBtn').classList.remove('active')};
-byId('streetBtn').onclick=()=>{if(map.hasLayer(satellite))map.removeLayer(satellite);streets.addTo(map);byId('streetBtn').classList.add('active');byId('satelliteBtn').classList.remove('active')};
+byId('satelliteBtn').onclick=showSatellite;
+byId('streetBtn').onclick=showStreets;
 ['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));
 byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();if(state.neighborhood==='all')map.setView([21.43,-157.96],10);else{const r=regions.find(x=>x.key===state.neighborhood);if(r)map.setView([r.lat,r.long],r.zoom)}});
 byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render()});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render()});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render()});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});

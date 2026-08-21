@@ -66,15 +66,32 @@ function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b
 function cardHTML(v,full=false){const s=statusFor(v);return `<article class="venue-row"><div class="venue-main"><div class="venue-avatar">${initials(v.name)}</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" aria-label="Verify ${v.name}">›</a></div></article>`}
 function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?list.map(v=>cardHTML(v,false)).join(''):'<div style="padding:30px">No matching happy hours.</div>';fullGrid.innerHTML=list.length?list.map(v=>cardHTML(v,true)).join(''):'<div style="padding:30px">No matching happy hours.</div>';byId('localClock').textContent=honoluluNow().label}
 function sync(){byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
-function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render()}
-function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list')}
+function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();if(hhMap)byId('recenterMap').click()}
+function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>hhMap.invalidateSize(),80)}
 
-function syncRegionMarkers(){/* Reference map is static artwork; list/filters remain interactive. */}
-function renderCoverage(){const strip=byId('coverageStrip');strip.innerHTML=regions.map(r=>{const count=venues.filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render()}))}
+let hhMap, satelliteLayer;
+function initMap(){
+  if(!window.L || hhMap) return;
+  hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});
+  const bounds=L.latLngBounds([[21.242,-158.305],[21.725,-157.615]]);
+  satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);
+  hhMap.fitBounds(bounds,{padding:[18,18]});
+  regions.forEach(r=>{
+    const count=venues.filter(v=>v.neighborhood===r.key).length;
+    const icon=L.divIcon({className:'region-marker',html:`<div class="region-pin" data-region="${r.key}"><i>●</i><span>${r.label}<small>${count} spot${count===1?'':'s'}</small></span></div>`,iconSize:null,iconAnchor:[15,15]});
+    const m=L.marker([r.lat,r.long],{icon}).addTo(hhMap);
+    m.on('click',()=>{state.neighborhood=r.key;sync();render();renderCoverage();});
+  });
+  byId('recenterMap')?.addEventListener('click',()=>hhMap.fitBounds(bounds,{padding:[18,18]}));
+  setTimeout(()=>hhMap.invalidateSize(),150);
+  window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100));
+}
+function syncRegionMarkers(){ if(hhMap) setTimeout(()=>hhMap.invalidateSize(),80); }
+function renderCoverage(){const strip=byId('coverageStrip');strip.innerHTML=regions.map(r=>{const count=venues.filter(v=>v.neighborhood===r.key).length;const active=state.neighborhood===r.key?' active':'';return `<button class="coverage-chip${active}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=regions.find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7})}))}
 
 ['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));
-byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render()});
+byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();renderCoverage();const r=regions.find(x=>x.key===state.neighborhood);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7})});
 byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render()});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render()});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render()});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});
 byId('mapViewBtn').onclick=()=>setView('map');byId('listViewBtn').onclick=()=>setView('list');byId('navMap').onclick=()=>setView('map');byId('navList').onclick=()=>setView('list');byId('clearFilters').onclick=clearFilters;byId('clearFilters2').onclick=clearFilters;
 const modal=byId('cityModal');byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=()=>{modal.classList.remove('open');modal.setAttribute('aria-hidden','true')};modal.querySelector('.modal-backdrop').onclick=byId('modalClose').onclick;
-renderCoverage();sync();render();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);
+renderCoverage();sync();render();initMap();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);

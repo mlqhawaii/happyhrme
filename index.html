@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="HourJoy helps you find the best happy hours happening now in Honolulu, with current drink and food deals, late-night specials, and neighborhood filters." />
-  <title>HourJoy — Happy hour, wherever you are.</title>
+  <meta name="description" content="HappyHr helps you find the best happy hours happening now in Honolulu, with current drink and food deals, late-night specials, and neighborhood filters." />
+  <title>HappyHr — Happy hour, without the hunt.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
@@ -13,9 +13,9 @@
 <body>
   <header class="site-header">
     <div class="shell nav-wrap">
-      <a class="brand" href="#top" aria-label="HourJoy home">
+      <a class="brand" href="#top" aria-label="HappyHr home">
         <span class="brand-mark" aria-hidden="true"><span></span></span>
-        <span>HourJoy</span>
+        <span>HappyHr</span>
       </a>
       <nav>
         <a href="#deals">Happy hours</a>
@@ -111,7 +111,12 @@
           <button class="clear-btn" id="clearFilters" type="button">Clear</button>
         </div>
 
-        <div id="venueGrid" class="venue-grid" aria-live="polite"></div>
+        <div class="venue-list-wrap">
+          <div class="venue-list-head" aria-hidden="true">
+            <span>Venue</span><span>Happy hour</span><span>Drink deal</span><span>Food deal</span><span>Beer</span><span>Status</span><span></span>
+          </div>
+          <div id="venueGrid" class="venue-list" aria-live="polite"></div>
+        </div>
       </div>
     </section>
 
@@ -122,7 +127,7 @@
           <h2>Honolulu first.<br>Every city next.</h2>
         </div>
         <div>
-          <p>HourJoy is designed to become a city-by-city happy-hour guide that answers one simple question: <strong>where can I get a good deal right now?</strong></p>
+          <p>HappyHr is designed to become a city-by-city happy-hour guide that answers one simple question: <strong>where can I get a good deal right now?</strong></p>
           <p>Listings link back to the venue or published source so you can verify details before you go. Happy-hour menus change, so accuracy and recent checks matter.</p>
           <div class="coming-cities"><span>Coming next</span><b>Los Angeles</b><b>New York</b><b>Tokyo</b><b>Sydney</b><b>London</b></div>
         </div>
@@ -132,8 +137,8 @@
 
   <footer>
     <div class="shell footer-row">
-      <a class="brand footer-brand" href="#top"><span class="brand-mark"><span></span></span><span>HourJoy</span></a>
-      <p>Happy hour, wherever you are.</p>
+      <a class="brand footer-brand" href="#top"><span class="brand-mark"><span></span></span><span>HappyHr</span></a>
+      <p>Happy hour, without the hunt.</p>
       <span>Honolulu MVP • 2026</span>
     </div>
   </footer>

@@ -64,12 +64,15 @@ function render(){
   grid.innerHTML=list.length?list.map(cardHTML).join(''):`<div class="empty"><strong>No matches.</strong><br>Try clearing a filter or searching another neighborhood.</div>`;
 }
 function cardHTML(v){
-  const s=statusFor(v); const price=v.beer?`Beer from $${v.beer}`:'Drink specials';
-  return `<article class="venue-card">
-    <div class="venue-top"><div class="venue-title"><h3>${v.name}</h3><p>${v.area} · ${v.days}</p></div><span class="status ${s.key}">${s.label}</span></div>
-    <div class="venue-deal"><div class="deal-box"><small>HAPPY HOUR</small><strong>${v.early}</strong></div><div class="deal-box"><small>${v.late==='—'?'DRINK DEAL':'LATE HAPPY HOUR'}</small><strong>${v.late==='—'?v.drinks:v.late}</strong></div></div>
-    <div class="venue-highlights"><strong>Food:</strong> ${v.food}</div>
-    <div class="venue-footer"><span class="price-pill">${price}</span>${isLate(v)?'<span class="tag">Late-night</span>':''}<a class="source-link" href="${v.source}" target="_blank" rel="noopener">Verify deal ↗</a></div>
+  const s=statusFor(v);
+  return `<article class="venue-row">
+    <div class="venue-main"><h3>${v.name}</h3><p>${v.area} · ${v.days}</p></div>
+    <div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>Late: ${v.late}</small>`:''}</div>
+    <div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div>
+    <div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>
+    <div class="venue-cell"><span class="mobile-label">Beer</span>${v.beer?`<span class="price-pill">$${v.beer}</span>`:'—'}</div>
+    <div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div>
+    <div class="venue-link"><span class="mobile-label">Source</span><a class="source-link" href="${v.source}" target="_blank" rel="noopener">Verify ↗</a></div>
   </article>`;
 }
 function refreshNow(){

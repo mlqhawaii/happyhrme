@@ -1,4 +1,4 @@
-const venues = [
+const fallbackVenues = [
   {name:"Aloha Beer Kakaʻako", neighborhood:"Kakaako", area:"Kakaʻako", days:"Daily", early:"2:00–6:00 PM", late:"—", beer:null, drinks:"$2 off draft pints", food:"$15-and-under happy-hour food menu", tags:["brewery","food"], source:"https://alohabeer.com/pages/locations", slots:{0:[[14,18]],1:[[14,18]],2:[[14,18]],3:[[14,18]],4:[[14,18]],5:[[14,18]],6:[[14,18]]}},
   {name:"Moku Kitchen", neighborhood:"Kakaako", area:"Kakaʻako", days:"Daily", early:"2:00–5:30 PM", late:"Late-night varies", beer:null, drinks:"Discounted drinks", food:"50% off small plates; $12 pizzas reported", tags:["food","groups"], source:"https://honolulutravels.com/honolulu-happy-hour-guide/", slots:{0:[[14,17.5]],1:[[14,17.5]],2:[[14,17.5]],3:[[14,17.5]],4:[[14,17.5]],5:[[14,17.5]],6:[[14,17.5]]}},
   {name:"PITCH Sports Bar", neighborhood:"Kakaako", area:"Kakaʻako", days:"Daily", early:"2:30–6:30 PM", late:"—", beer:null, drinks:"Beer bucket specials reported", food:"$3 hand rolls reported", tags:["sports","sushi"], source:"https://pitchsportsbar.com/about", slots:{0:[[14.5,18.5]],1:[[14.5,18.5]],2:[[14.5,18.5]],3:[[14.5,18.5]],4:[[14.5,18.5]],5:[[14.5,18.5]],6:[[14.5,18.5]]}},
@@ -38,6 +38,57 @@ const venues = [
   {name:"Uncle Bo's Haleiwa", neighborhood:"North Shore", area:"Haleʻiwa", days:"Daily when open", early:"2:00–6:00 PM", late:"—", beer:null, drinks:"Happy-hour drink specials", food:"Happy-hour pupu menu", tags:["northshore","food","local"], source:"https://www.unclebosrestaurant.com/wp-content/uploads/2022/07/HALEIWA-DINNER-MENU-2.pdf", slots:{2:[[14,18]],3:[[14,18]],4:[[14,18]],5:[[14,18]],6:[[14,18]],0:[[14,18]]}},
 ];
 
+
+const SUPABASE_URL = "https://woygwngmfdkwotopkeur.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ovVbmHBT-ROEjmM6Vc48_w_qGrX7y5t";
+let venues = [...fallbackVenues];
+
+function rowToVenue(row){
+  return {
+    name: row.venue_name,
+    neighborhood: row.neighborhood || row.area || "",
+    area: row.area || row.neighborhood || "",
+    days: row.days || "Confirm hours",
+    early: row.early_display || "Confirm current hours",
+    late: row.late_display || "—",
+    beer: row.cheapest_beer == null ? null : Number(row.cheapest_beer),
+    drinks: row.drink_highlight || "—",
+    food: row.food_highlight || "—",
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    source: row.source_url || "#",
+    slots: row.schedule && typeof row.schedule === "object" ? row.schedule : {}
+  };
+}
+
+async function loadVenuesFromSupabase(){
+  const fields = [
+    "venue_name","area","neighborhood","days","early_display","late_display",
+    "cheapest_beer","drink_highlight","food_highlight","source_url","tags","schedule"
+  ].join(",");
+  const url = `${SUPABASE_URL}/rest/v1/happy_hours?select=${encodeURIComponent(fields)}&active=eq.true&order=venue_name.asc`;
+  try {
+    const response = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        Accept: "application/json"
+      }
+    });
+    if(!response.ok) throw new Error(`Supabase ${response.status}`);
+    const rows = await response.json();
+    if(!Array.isArray(rows) || !rows.length) throw new Error("No active venues returned");
+    venues = rows.map(rowToVenue);
+    renderCoverage();
+    sync();
+    render();
+    renderMapMarkers();
+    document.documentElement.dataset.dataSource = "supabase";
+  } catch (error) {
+    console.warn("HappyHr.Me is using the bundled venue fallback because Supabase could not be reached.", error);
+    document.documentElement.dataset.dataSource = "fallback";
+  }
+}
+
 const regions = [
   {key:"North Shore",label:"North Shore / Haleʻiwa",lat:21.593,long:-158.104,zoom:12},
   {key:"Windward",label:"Kailua / Kāneʻohe",lat:21.407,long:-157.744,zoom:12},
@@ -69,19 +120,26 @@ function sync(){byId('neighborhoodFilter').value=state.neighborhood;byId('timeFi
 function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();if(hhMap)byId('recenterMap').click()}
 function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>hhMap.invalidateSize(),80)}
 
-let hhMap, satelliteLayer;
+let hhMap, satelliteLayer, regionMarkers=[];
+function renderMapMarkers(){
+  if(!hhMap || !window.L) return;
+  regionMarkers.forEach(m=>hhMap.removeLayer(m));
+  regionMarkers=[];
+  regions.forEach(r=>{
+    const count=venues.filter(v=>v.neighborhood===r.key).length;
+    const icon=L.divIcon({className:'region-marker',html:`<div class="region-pin" data-region="${r.key}"><i>●</i><span>${r.label}<small>${count} spot${count===1?'':'s'}</small></span></div>`,iconSize:null,iconAnchor:[15,15]});
+    const m=L.marker([r.lat,r.long],{icon}).addTo(hhMap);
+    m.on('click',()=>{state.neighborhood=r.key;sync();render();renderCoverage();});
+    regionMarkers.push(m);
+  });
+}
 function initMap(){
   if(!window.L || hhMap) return;
   hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});
   const bounds=L.latLngBounds([[21.242,-158.305],[21.725,-157.615]]);
   satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);
   hhMap.fitBounds(bounds,{padding:[18,18]});
-  regions.forEach(r=>{
-    const count=venues.filter(v=>v.neighborhood===r.key).length;
-    const icon=L.divIcon({className:'region-marker',html:`<div class="region-pin" data-region="${r.key}"><i>●</i><span>${r.label}<small>${count} spot${count===1?'':'s'}</small></span></div>`,iconSize:null,iconAnchor:[15,15]});
-    const m=L.marker([r.lat,r.long],{icon}).addTo(hhMap);
-    m.on('click',()=>{state.neighborhood=r.key;sync();render();renderCoverage();});
-  });
+  renderMapMarkers();
   byId('recenterMap')?.addEventListener('click',()=>hhMap.fitBounds(bounds,{padding:[18,18]}));
   setTimeout(()=>hhMap.invalidateSize(),150);
   window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100));
@@ -94,4 +152,4 @@ byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.ta
 byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render()});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render()});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render()});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});
 byId('mapViewBtn').onclick=()=>setView('map');byId('listViewBtn').onclick=()=>setView('list');byId('navMap').onclick=()=>setView('map');byId('navList').onclick=()=>setView('list');byId('clearFilters').onclick=clearFilters;byId('clearFilters2').onclick=clearFilters;
 const modal=byId('cityModal');byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=()=>{modal.classList.remove('open');modal.setAttribute('aria-hidden','true')};modal.querySelector('.modal-backdrop').onclick=byId('modalClose').onclick;
-renderCoverage();sync();render();initMap();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);
+renderCoverage();sync();render();initMap();loadVenuesFromSupabase();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);

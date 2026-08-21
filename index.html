@@ -2,180 +2,122 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="HappyHr helps you find the best happy hours happening now in Honolulu, with current drink and food deals, late-night specials, and neighborhood filters." />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="HappyHr.Me finds current happy hours across Oʻahu with map and list views, open-now status, drink deals and food specials." />
   <title>HappyHr.Me — Happy hour, without the hunt.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynfc2zXsMrPxZJwYmLKCZbP9h1e4=" crossorigin="anonymous">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="site-header">
-    <div class="shell nav-wrap">
-      <a class="brand" href="#top" aria-label="HappyHr.Me home">
-        <span class="brand-mark minimal-mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64" role="img" aria-hidden="true" class="highball-logo">
-            <path class="glass-line" d="M18 10h28l-3.4 43H21.4L18 10Z"/>
-            <path class="drink-fill" d="M22 29h20l-1.5 20h-17L22 29Z"/>
-            <path class="glass-line" d="M20.8 29h22.4"/>
-            <path class="glass-line" d="M37 12l7-8"/>
-            <path class="garnish-line" d="M42 9c5.4-4.2 10.4-.5 9.8 4.9-5.7.9-9.2-1.1-9.8-4.9Z"/>
-          </svg>
-        </span>
-        <span class="brand-word"><span class="brand-happy">Happy</span><span class="brand-hr">Hr</span><span class="brand-dot">.</span><span class="brand-tld">Me</span></span>
-      </a>
-      <nav>
-        <a href="#deals">Happy hours</a>
-        <a href="#quick-picks">Quick picks</a>
-        <a href="#about">About</a>
-      </nav>
-      <button class="city-pill" id="cityPill" type="button"><span class="dot"></span> Honolulu ▾</button>
-    </div>
-  </header>
-
-  <main id="top">
-    <section class="hero">
-      <div class="shell hero-grid">
-        <div class="hero-copy">
-          <div class="eyebrow">HONOLULU • CURATED & CHECKED</div>
-          <h1>Happy hour,<br><span>without the hunt.</span></h1>
-          <p>Find the best drink and food deals happening around you — sorted by time, neighborhood and price.</p>
-          <div class="hero-search">
-            <span aria-hidden="true">⌕</span>
-            <input id="heroSearch" type="search" placeholder="Search a venue or neighborhood…" autocomplete="off" />
-            <button id="showNowBtn" type="button">Show open now</button>
-          </div>
-          <div class="hero-meta">
-            <span><strong id="venueCount">22</strong> venues</span>
-            <span><strong id="localClock">—</strong> HST</span>
-            <span>Last checked Aug 20, 2026</span>
-          </div>
-        </div>
-        <aside class="now-card">
-          <div class="now-card-top">
-            <span class="pulse"></span>
-            <span>HAPPENING NOW</span>
-          </div>
-          <h2 id="nowCount">Checking…</h2>
-          <p>happy hours are active right now in Honolulu.</p>
-          <div id="nowPreview" class="now-preview"></div>
-          <a href="#deals" id="seeNowLink">See what’s pouring →</a>
-        </aside>
-      </div>
-    </section>
-
-    <section class="stats-band">
-      <div class="shell stats-grid">
-        <div><strong>Waikīkī</strong><span>rooftops, hotel bars & late-night</span></div>
-        <div><strong>Kakaʻako</strong><span>breweries, sushi & local favorites</span></div>
-        <div><strong>Ala Moana</strong><span>long happy hours & easy meetups</span></div>
-        <div><strong>Updated regularly</strong><span>source links on every listing</span></div>
-      </div>
-    </section>
-
-    <section id="quick-picks" class="quick-section shell">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">QUICK PICKS</div>
-          <h2>Skip straight to the good stuff.</h2>
-        </div>
-        <p>Useful shortcuts based on the current Honolulu list.</p>
-      </div>
-      <div class="quick-grid">
-        <button class="quick-card" data-preset="cheap"><span>🍺</span><div><small>CHEAPEST BEER</small><strong>$4 deals</strong><em>The Row + The Seaside</em></div></button>
-        <button class="quick-card" data-preset="late"><span>🌙</span><div><small>LATE NIGHT</small><strong>After 9 PM</strong><em>Earls, Chart House, Doraku</em></div></button>
-        <button class="quick-card" data-preset="rooftop"><span>🌇</span><div><small>ROOFTOP</small><strong>Sunset deals</strong><em>SKY Waikiki + Tommy Bahama</em></div></button>
-        <button class="quick-card" data-preset="food"><span>🍽️</span><div><small>FOOD VALUE</small><strong>Best bites</strong><em>Moku + Butcher Bar</em></div></button>
-      </div>
-    </section>
-
-    <section id="deals" class="deals-section">
-      <div class="shell">
-        <div class="section-heading deals-head">
-          <div>
-            <div class="eyebrow">HONOLULU HAPPY HOURS</div>
-            <h2>Find your next stop.</h2>
-          </div>
-          <div class="result-count"><strong id="resultCount">22</strong> matching spots</div>
-        </div>
-
-        <div class="filter-bar">
-          <div class="search-mini"><span>⌕</span><input id="searchInput" type="search" placeholder="Search venues…" /></div>
-          <select id="neighborhoodFilter" aria-label="Neighborhood">
-            <option value="all">All neighborhoods</option>
-            <option value="Waikiki">Waikīkī</option>
-            <option value="Kakaako">Kakaʻako</option>
-            <option value="Ala Moana">Ala Moana</option>
-          </select>
-          <button class="filter-toggle" id="openNowFilter" type="button">● Open now</button>
-          <button class="filter-toggle" id="cheapFilter" type="button">Beer ≤ $6</button>
-          <button class="filter-toggle" id="lateFilter" type="button">Late night</button>
-          <select id="sortSelect" aria-label="Sort listings">
-            <option value="recommended">Recommended</option>
-            <option value="beer">Lowest beer price</option>
-            <option value="name">A–Z</option>
-          </select>
-          <button class="clear-btn" id="clearFilters" type="button">Clear</button>
-        </div>
-
-        <div class="venue-list-wrap">
-          <div class="venue-list-head" aria-hidden="true">
-            <span>Venue</span><span>Happy hour</span><span>Drink deal</span><span>Food deal</span><span>Beer</span><span>Status</span><span></span>
-          </div>
-          <div id="venueGrid" class="venue-list" aria-live="polite"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="about" class="about-section">
-      <div class="shell about-grid">
-        <div>
-          <div class="eyebrow">BUILT TO TRAVEL</div>
-          <h2>Honolulu first.<br>Every city next.</h2>
-        </div>
-        <div>
-          <p>HappyHr is designed to become a city-by-city happy-hour guide that answers one simple question: <strong>where can I get a good deal right now?</strong></p>
-          <p>Listings link back to the venue or published source so you can verify details before you go. Happy-hour menus change, so accuracy and recent checks matter.</p>
-          <div class="coming-cities"><span>Coming next</span><b>Los Angeles</b><b>New York</b><b>Tokyo</b><b>Sydney</b><b>London</b></div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="shell footer-row">
-      <a class="brand footer-brand" href="#top" aria-label="HappyHr.Me home">
-        <span class="brand-mark minimal-mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64" aria-hidden="true" class="highball-logo">
-            <path class="glass-line" d="M18 10h28l-3.4 43H21.4L18 10Z"/>
-            <path class="drink-fill" d="M22 29h20l-1.5 20h-17L22 29Z"/>
-            <path class="glass-line" d="M20.8 29h22.4"/>
-            <path class="glass-line" d="M37 12l7-8"/>
-            <path class="garnish-line" d="M42 9c5.4-4.2 10.4-.5 9.8 4.9-5.7.9-9.2-1.1-9.8-4.9Z"/>
-          </svg>
-        </span>
-        <span class="brand-word"><span class="brand-happy">Happy</span><span class="brand-hr">Hr</span><span class="brand-dot">.</span><span class="brand-tld">Me</span></span>
-      </a>
-      <p>Happy hour, without the hunt.</p>
-      <span>Honolulu MVP • 2026</span>
-    </div>
-  </footer>
-
-  <div id="cityModal" class="modal" aria-hidden="true">
-    <div class="modal-backdrop"></div>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Choose a city">
-      <button class="modal-close" id="modalClose" aria-label="Close">×</button>
-      <small>CHOOSE A CITY</small>
-      <h3>Where are you drinking?</h3>
-      <button class="city-choice active">Honolulu <span>Live</span></button>
-      <button class="city-choice" disabled>Los Angeles <span>Coming soon</span></button>
-      <button class="city-choice" disabled>New York <span>Coming soon</span></button>
-      <button class="city-choice" disabled>Tokyo <span>Coming soon</span></button>
-      <button class="city-choice" disabled>Sydney <span>Coming soon</span></button>
+<header class="site-header">
+  <div class="shell nav-wrap">
+    <a class="brand" href="#top" aria-label="HappyHr.Me home">
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 46 58" role="img">
+          <path d="M10 7h25l-3.2 43H13.2L10 7Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+          <path d="M14.5 31h16.8l-1.2 15H15.7l-1.2-15Z" class="logo-liquid"/>
+          <path d="M14.5 31h16.8" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M26 8 34 1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M32 8c5-5 10-.8 9.5 4.8-5.8.9-9.2-1-9.5-4.8Z" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </span>
+      <span class="brand-text"><span>Happy</span><b>Hr</b><i>.</i><em>Me</em></span>
+    </a>
+    <nav class="desktop-nav">
+      <a class="active" href="#finder">Happy hours</a>
+      <a href="#finder" id="navMap">Map</a>
+      <a href="#finder" id="navList">List</a>
+      <a href="#about">About</a>
+    </nav>
+    <div class="nav-actions">
+      <div class="nav-search"><span>⌕</span><input id="headerSearch" type="search" placeholder="Search bars, restaurants…"></div>
+      <button class="city-pill" id="cityPill" type="button">Oʻahu ▾</button>
     </div>
   </div>
+</header>
 
-  <script src="app.js"></script>
+<main id="top">
+  <section class="hero shell">
+    <div class="hero-copy">
+      <div class="eyebrow">OʻAHU · CURATED HAPPY HOURS</div>
+      <h1>Happy hour, without the hunt.</h1>
+      <p>Find the best drink and food deals happening around Oʻahu — by area, time and price.</p>
+    </div>
+    <div class="hero-features">
+      <div><span class="feature-icon">◷</span><p><strong>Always up to date</strong><small>Live hours and open-now status.</small></p></div>
+      <div><span class="feature-icon">◇</span><p><strong>Curated quality</strong><small>Real venue deals with source links.</small></p></div>
+      <div><span class="feature-icon">⌖</span><p><strong>Every corner of Oʻahu</strong><small>Town, West, Windward and North Shore.</small></p></div>
+    </div>
+  </section>
+
+  <section id="finder" class="finder-section">
+    <div class="shell">
+      <div class="filter-toolbar">
+        <select id="neighborhoodFilter" aria-label="Area">
+          <option value="all">⌖ All areas</option>
+          <option value="Waikiki">Waikīkī</option>
+          <option value="Kakaako">Kakaʻako</option>
+          <option value="Ala Moana">Ala Moana</option>
+          <option value="East Honolulu">Kaimukī / Kāhala</option>
+          <option value="Central">Aiea / Pearl City</option>
+          <option value="West Oahu">Kapolei / Ko Olina</option>
+          <option value="Windward">Kailua / Kāneʻohe</option>
+          <option value="North Shore">North Shore / Haleʻiwa</option>
+        </select>
+        <select id="timeFilter" aria-label="Time"><option value="any">◷ Any time</option><option value="open">Open now</option><option value="late">Late night</option></select>
+        <select id="priceFilter" aria-label="Price"><option value="any">$ Any price</option><option value="6">Beer ≤ $6</option><option value="5">Beer ≤ $5</option></select>
+        <label class="open-switch"><input id="openNowFilter" type="checkbox"><span></span>Open now only</label>
+        <div class="toolbar-spacer"></div>
+        <div class="view-toggle" role="group" aria-label="View">
+          <button id="mapViewBtn" class="active" type="button">⌑ Map</button><button id="listViewBtn" type="button">☷ List</button>
+        </div>
+        <select id="sortSelect" aria-label="Sort"><option value="recommended">Sort: Recommended</option><option value="beer">Lowest beer price</option><option value="name">A–Z</option></select>
+      </div>
+
+      <div class="search-strip">
+        <div class="search-main"><span>⌕</span><input id="searchInput" type="search" placeholder="Search venues, neighborhoods or deals…"></div>
+        <div class="results-meta"><strong id="resultCount">36</strong> spots · <span id="localClock">—</span> HST</div>
+      </div>
+
+      <div class="coverage-strip" id="coverageStrip"></div>
+
+      <div id="mapMode" class="finder-grid">
+        <section class="map-panel">
+          <div id="map" aria-label="Map of happy hour coverage across Oʻahu"></div>
+          <div class="map-badge"><strong>Oʻahu</strong><span>All major regions</span></div>
+          <div class="map-layer-toggle"><button id="satelliteBtn" class="active">Satellite</button><button id="streetBtn">Streets</button></div>
+        </section>
+        <section class="results-panel">
+          <div class="results-head"><div><span class="eyebrow">HAPPY HOURS</span><h2>Deals around Oʻahu</h2></div><button id="clearFilters" class="text-btn" type="button">Clear filters</button></div>
+          <div class="venue-list-head"><span>Venue</span><span>Area</span><span>Happy hour</span><span>Deal highlights</span><span>Status</span><span></span></div>
+          <div id="venueGrid" class="venue-list" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <div id="listMode" class="list-only hidden">
+        <div class="list-only-head"><div><span class="eyebrow">FULL LIST</span><h2>All Oʻahu happy hours</h2></div><button id="clearFilters2" class="text-btn" type="button">Clear filters</button></div>
+        <div class="venue-list-head full"><span>Venue</span><span>Area</span><span>Happy hour</span><span>Drink deal</span><span>Food deal</span><span>Status</span><span></span></div>
+        <div id="venueGridFull" class="venue-list full-list" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="about-section">
+    <div class="shell about-grid">
+      <div><span class="eyebrow">BUILT TO TRAVEL</span><h2>Your island.<br>Your happy hour.</h2></div>
+      <div><p>HappyHr.Me is built around one simple question: <strong>where can I get a good deal right now?</strong> Oʻahu is the launch market, with each listing tied back to a venue or published source so the details can be checked before you go.</p><p>Next up: more Oʻahu coverage, better venue photos, favorites, and additional cities.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="shell footer-row"><a class="brand footer-brand" href="#top"><span class="brand-icon small" aria-hidden="true"><svg viewBox="0 0 46 58"><path d="M10 7h25l-3.2 43H13.2L10 7Z" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M14.5 31h16.8l-1.2 15H15.7l-1.2-15Z" class="logo-liquid"/></svg></span><span class="brand-text"><span>Happy</span><b>Hr</b><i>.</i><em>Me</em></span></a><p>Curated happy hours. Real deals. Good vibes.</p><span>Oʻahu launch · 2026</span></div></footer>
+
+<div id="cityModal" class="modal" aria-hidden="true"><div class="modal-backdrop"></div><div class="modal-card" role="dialog" aria-modal="true"><button id="modalClose" class="modal-close">×</button><small>CHOOSE A CITY</small><h3>Where are you drinking?</h3><button class="city-choice active">Oʻahu <span>Live</span></button><button class="city-choice" disabled>Los Angeles <span>Coming soon</span></button><button class="city-choice" disabled>New York <span>Coming soon</span></button><button class="city-choice" disabled>Tokyo <span>Coming soon</span></button></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+<script src="app.js"></script>
 </body>
 </html>

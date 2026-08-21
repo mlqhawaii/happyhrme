@@ -20,88 +20,68 @@ const venues = [
   {name:"Tommy Bahama Restaurant & Bar", neighborhood:"Waikiki", area:"Waikīkī", days:"Daily", early:"3:00–5:00 PM", late:"—", beer:8, drinks:"$8 select draft beer; $10 wells", food:"All starters $5 off; sliders/tacos deals", tags:["rooftop","relaxed"], source:"https://content.tommybahama.com/content/dam/tommy/restaurants/waikiki/Waikiki_Dinner_Menu.pdf", slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
   {name:"Hy’s Steak House", neighborhood:"Waikiki", area:"Waikīkī", days:"Nightly", early:"5:00–6:30 PM", late:"—", beer:null, drinks:"Happy-hour cocktails / wine", food:"Oysters, shrimp cocktail & bar bites", tags:["upscale","date"], source:"https://hyswaikiki.com/happy-hour/", slots:{0:[[17,18.5]],1:[[17,18.5]],2:[[17,18.5]],3:[[17,18.5]],4:[[17,18.5]],5:[[17,18.5]],6:[[17,18.5]]}},
   {name:"Splash Bar Waikiki", neighborhood:"Waikiki", area:"Waikīkī", days:"Daily", early:"3:00–5:00 PM", late:"—", beer:null, drinks:"$2 off draft beers; $12 cocktails", food:"$7 fries / dip / edamame", tags:["casual","hotel"], source:"https://www.splashbarwaikiki.com/specials", slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
-  {name:"Aloha Table Waikiki", neighborhood:"Waikiki", area:"Waikīkī", days:"Daily", early:"Confirm current hours", late:"—", beer:5, drinks:"$5 Bud Light; $6.50 Aloha Blonde", food:"Under-$10 dishes", tags:["cheap","casual"], source:"https://www.waikiki.alohatable.com/happy-hour", slots:{}}
+  {name:"Aloha Table Waikiki", neighborhood:"Waikiki", area:"Waikīkī", days:"Daily", early:"Confirm current hours", late:"—", beer:5, drinks:"$5 Bud Light; $6.50 Aloha Blonde", food:"Under-$10 dishes", tags:["cheap","casual"], source:"https://www.waikiki.alohatable.com/happy-hour", slots:{}},
+
+  {name:"808 Craft House", neighborhood:"West Oahu", area:"Ko Olina", days:"Daily", early:"3:00–5:00 PM", late:"9:00 PM–close", beer:7, drinks:"$7 select drafts; $7 wells; $9 Mai Tais", food:"25% off select apps; $15 smashburger", tags:["late","food","resort"], source:"https://www.808craft.com/happy-hour/", slots:{0:[[15,17],[21,23]],1:[[15,17],[21,23]],2:[[15,17],[21,23]],3:[[15,17],[21,23]],4:[[15,17],[21,23]],5:[[15,17],[21,23]],6:[[15,17],[21,23]]}},
+  {name:"Monkeypod Kitchen Ko Olina", neighborhood:"West Oahu", area:"Ko Olina", days:"Daily", early:"3:30–5:00 PM", late:"—", beer:null, drinks:"Happy-hour craft beer & cocktail specials", food:"Selected happy-hour food", tags:["food","resort","music"], source:"https://koolinashops.com/dining/monkeypod-kitchen-by-merriman", slots:{0:[[15.5,17]],1:[[15.5,17]],2:[[15.5,17]],3:[[15.5,17]],4:[[15.5,17]],5:[[15.5,17]],6:[[15.5,17]]}},
+  {name:"Mekiko Cantina", neighborhood:"West Oahu", area:"Ko Olina", days:"Daily", early:"3:00–5:00 PM", late:"—", beer:null, drinks:"Select drink & cocktail specials", food:"Happy-hour appetizers", tags:["mexican","resort","food"], source:"https://koolinashops.com/offers", slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"Moani Island Bistro & Bar", neighborhood:"West Oahu", area:"Kapolei", days:"Daily", early:"3:00–5:00 PM", late:"—", beer:null, drinks:"Daily happy-hour drink specials", food:"Happy-hour food menu", tags:["music","food","local"], source:"https://www.moanikapolei.com/", slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"Maui Brewing Co. Kailua", neighborhood:"Windward", area:"Kailua", days:"Mon–Fri", early:"3:30–5:30 PM", late:"—", beer:null, drinks:"$2 off beers; $3 off craft cocktails", food:"$14 pizzas; 50% off select apps", tags:["brewery","food","groups"], source:"https://www.mbcrestaurants.com/kailua/", slots:{1:[[15.5,17.5]],2:[[15.5,17.5]],3:[[15.5,17.5]],4:[[15.5,17.5]],5:[[15.5,17.5]]}},
+  {name:"The Boardroom Kailua", neighborhood:"Windward", area:"Kailua", days:"Wed–Sun", early:"5:00–6:00 PM", late:"9:00–11:30 PM Fri–Sat", beer:null, drinks:"$15 signatures; $8 oyster shooters", food:"$5 off select apps", tags:["cocktails","date","late"], source:"https://www.theboardroomkailua.com/", slots:{3:[[17,18]],4:[[17,18]],5:[[17,18],[21,23.5]],6:[[17,18],[21,23.5]],0:[[17,18]]}},
+  {name:"The Garden Kailua", neighborhood:"Windward", area:"Kailua", days:"Mon–Fri", early:"3:00–6:00 PM", late:"—", beer:null, drinks:"Pau Hana beer, wine & cocktail specials", food:"Daily pizza specials", tags:["outdoor","music","food"], source:"https://www.thegardenkailua.com/", slots:{1:[[15,18]],2:[[15,18]],3:[[15,18]],4:[[15,18]],5:[[15,18]]}},
+  {name:"Gyu-Kaku Windward Mall", neighborhood:"Windward", area:"Kāneʻohe", days:"Daily", early:"Mon/Thu all day; others 11 AM–6 PM", late:"Late window most days", beer:null, drinks:"Happy-hour drink pricing", food:"Happy-hour yakiniku pricing", tags:["food","late","groups"], source:"https://www.gyu-kaku.com/windward-mall/", slots:{0:[[11,18],[20,20.25]],1:[[11,20.25]],2:[[11,18],[20,20.25]],3:[[11,18],[20,20.25]],4:[[11,20.25]],5:[[11,18],[20,20.75]],6:[[11,18],[20,20.75]]}},
+  {name:"BREW'd Craft Pub", neighborhood:"East Honolulu", area:"Kaimukī", days:"Daily", early:"4:00–6:00 PM", late:"—", beer:null, drinks:"$2 off full drafts; $6 wells & house wine", food:"$3 off appetizers & pub fare", tags:["brewery","food","dogs"], source:"https://www.brewdcraftpub.com/", slots:{0:[[16,18]],1:[[16,18]],2:[[16,18]],3:[[16,18]],4:[[16,18]],5:[[16,18]],6:[[16,18]]}},
+  {name:"et al.", neighborhood:"East Honolulu", area:"Kāhala", days:"Daily", early:"Happy hour — verify current time", late:"—", beer:null, drinks:"Pau hana cocktail specials", food:"Sliders, arancini & snackable specials", tags:["upscale","date","food"], source:"https://etalhawaii.com/", slots:{}},
+  {name:"Restaurant 604", neighborhood:"Central", area:"Pearl Harbor", days:"Mon–Fri", early:"3:00–5:00 PM", late:"—", beer:null, drinks:"Aloha Hour cocktails & drink specials", food:"Appetizer specials", tags:["waterfront","music","food"], source:"https://jbphh.greatlifehawaii.com/dining-retail/restaurants/restaurant-604", slots:{1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]]}},
+  {name:"Dixie Grill BBQ & Crab Shack", neighborhood:"Central", area:"Aiea", days:"Daily", early:"3:00–6:00 PM; Mon all day", late:"—", beer:9, drinks:"32oz draft $9; wells $7; Jameson/Jack $6", food:"$7 onion rings; $11 calamari; HH bites", tags:["bbq","sports","food"], source:"https://dixiegrill.com/aiea-near-aloha-stadium-dixie-grill-bbq-and-crab-shack-happy-hours-specials", slots:{0:[[15,18]],1:[[11,21]],2:[[15,18]],3:[[15,18]],4:[[15,18]],5:[[15,18]],6:[[15,18]]}},
+  {name:"Little Joe's Steakhouse Pearl City", neighborhood:"Central", area:"Pearl City", days:"Nightly", early:"4:30–7:00 PM", late:"—", beer:4.95, drinks:"Beers from $4.95; wine from $8.95", food:"Discounted steakhouse menu until 6:30", tags:["steak","food","date","cheap"], source:"https://www.littlejoessteakhouse.com/happyhour", slots:{0:[[16.5,19]],1:[[16.5,19]],2:[[16.5,19]],3:[[16.5,19]],4:[[16.5,19]],5:[[16.5,19]],6:[[16.5,19]]}},
+  {name:"Uncle Bo's Haleiwa", neighborhood:"North Shore", area:"Haleʻiwa", days:"Daily when open", early:"2:00–6:00 PM", late:"—", beer:null, drinks:"Happy-hour drink specials", food:"Happy-hour pupu menu", tags:["northshore","food","local"], source:"https://www.unclebosrestaurant.com/wp-content/uploads/2022/07/HALEIWA-DINNER-MENU-2.pdf", slots:{2:[[14,18]],3:[[14,18]],4:[[14,18]],5:[[14,18]],6:[[14,18]],0:[[14,18]]}},
 ];
 
-const state={q:"",neighborhood:"all",open:false,cheap:false,late:false,sort:"recommended",preset:null};
-const grid=document.getElementById('venueGrid');
-const resultCount=document.getElementById('resultCount');
-const localClock=document.getElementById('localClock');
-const nowCount=document.getElementById('nowCount');
-const nowPreview=document.getElementById('nowPreview');
+const regions = [
+  {key:"North Shore",label:"North Shore / Haleʻiwa",lat:21.593,long:-158.104,zoom:12},
+  {key:"Windward",label:"Kailua / Kāneʻohe",lat:21.407,long:-157.744,zoom:12},
+  {key:"Central",label:"Aiea / Pearl City",lat:21.397,long:-157.965,zoom:12},
+  {key:"West Oahu",label:"Kapolei / Ko Olina",lat:21.338,long:-158.123,zoom:12},
+  {key:"East Honolulu",label:"Kaimukī / Kāhala",lat:21.278,long:-157.789,zoom:13},
+  {key:"Ala Moana",label:"Ala Moana",lat:21.291,long:-157.843,zoom:14},
+  {key:"Kakaako",label:"Kakaʻako",lat:21.297,long:-157.858,zoom:14},
+  {key:"Waikiki",label:"Waikīkī",lat:21.279,long:-157.829,zoom:14}
+];
+
+const state={q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended",view:"map"};
+const byId=id=>document.getElementById(id);
+const grid=byId('venueGrid'), fullGrid=byId('venueGridFull'), resultCount=byId('resultCount');
 
 function honoluluNow(){
   const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Pacific/Honolulu',weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());
-  const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));
-  const dayMap={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
-  let hour=Number(map.hour); if(hour===24) hour=0;
-  return {day:dayMap[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`};
+  const map=Object.fromEntries(parts.map(p=>[p.type,p.value])); const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}; let hour=Number(map.hour);if(hour===24)hour=0;
+  return {day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`};
 }
-function statusFor(v){
-  const n=honoluluNow(), slots=v.slots[n.day]||[];
-  for(const [s,e] of slots){if(n.hour>=s&&n.hour<e)return {key:'open',label:'Open now'};}
-  const future=slots.find(([s])=>s>n.hour);
-  if(future){const h=Math.floor(future[0]),m=future[0]%1?30:0;return {key:'later',label:`Starts ${h>12?h-12:h}:${m?'30':'00'} ${h>=12?'PM':'AM'}`};}
-  return {key:'closed',label:slots.length?'Done today':'Check hours'};
-}
-function isLate(v){return v.tags.includes('late')||v.late!=='—';}
-function render(){
-  let list=venues.filter(v=>{
-    const text=(v.name+' '+v.area+' '+v.drinks+' '+v.food+' '+v.tags.join(' ')).toLowerCase();
-    if(state.q&&!text.includes(state.q.toLowerCase()))return false;
-    if(state.neighborhood!=='all'&&v.neighborhood!==state.neighborhood)return false;
-    if(state.open&&statusFor(v).key!=='open')return false;
-    if(state.cheap&&!(v.beer&&v.beer<=6))return false;
-    if(state.late&&!isLate(v))return false;
-    if(state.preset==='rooftop'&&!v.tags.includes('rooftop'))return false;
-    if(state.preset==='food'&&!v.tags.includes('food'))return false;
-    return true;
-  });
-  if(state.sort==='beer')list.sort((a,b)=>(a.beer??99)-(b.beer??99));
-  if(state.sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name));
-  if(state.sort==='recommended')list.sort((a,b)=>{const sa=statusFor(a).key==='open'?0:1,sb=statusFor(b).key==='open'?0:1;return sa-sb||(a.beer??99)-(b.beer??99)});
-  resultCount.textContent=list.length;
-  grid.innerHTML=list.length?list.map(cardHTML).join(''):`<div class="empty"><strong>No matches.</strong><br>Try clearing a filter or searching another neighborhood.</div>`;
-}
-function cardHTML(v){
-  const s=statusFor(v);
-  return `<article class="venue-row">
-    <div class="venue-main"><h3>${v.name}</h3><p>${v.area} · ${v.days}</p></div>
-    <div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>Late: ${v.late}</small>`:''}</div>
-    <div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div>
-    <div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>
-    <div class="venue-cell"><span class="mobile-label">Beer</span>${v.beer?`<span class="price-pill">$${v.beer}</span>`:'—'}</div>
-    <div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div>
-    <div class="venue-link"><span class="mobile-label">Source</span><a class="source-link" href="${v.source}" target="_blank" rel="noopener">Verify ↗</a></div>
-  </article>`;
-}
-function refreshNow(){
-  const n=honoluluNow(); localClock.textContent=n.label;
-  const open=venues.filter(v=>statusFor(v).key==='open');
-  nowCount.textContent=`${open.length} ${open.length===1?'spot':'spots'}`;
-  nowPreview.innerHTML=open.slice(0,3).map(v=>`<div class="now-mini"><span>${v.name}</span><span>${v.early}</span></div>`).join('')||'<div class="now-mini"><span>No confirmed deals active this minute.</span><span>Plan ahead ↓</span></div>';
-}
-function syncInputs(){
-  document.getElementById('searchInput').value=state.q; document.getElementById('heroSearch').value=state.q;
-  document.getElementById('neighborhoodFilter').value=state.neighborhood;
-  document.getElementById('openNowFilter').classList.toggle('active',state.open);
-  document.getElementById('cheapFilter').classList.toggle('active',state.cheap);
-  document.getElementById('lateFilter').classList.toggle('active',state.late);
-  document.getElementById('sortSelect').value=state.sort;
-}
-function setPreset(p){state.preset=null;if(p==='cheap'){state.cheap=true;state.sort='beer'}if(p==='late')state.late=true;if(p==='rooftop'||p==='food')state.preset=p;syncInputs();render();document.getElementById('deals').scrollIntoView({behavior:'smooth'});}
+function statusFor(v){const n=honoluluNow(),slots=v.slots[n.day]||[];for(const[s,e]of slots){if(n.hour>=s&&n.hour<e)return{key:'open',label:'Open now'}}const future=slots.find(([s])=>s>n.hour);if(future){let h=Math.floor(future[0]),m=future[0]%1?30:0;return{key:'later',label:`Starts ${h>12?h-12:h}:${m?'30':'00'} ${h>=12?'PM':'AM'}`}}return{key:'closed',label:slots.length?'Done today':'Check hours'}}
+function isLate(v){return v.tags.includes('late')||v.late!=='—'}
+function filtered(){let list=venues.filter(v=>{const text=(v.name+' '+v.area+' '+v.drinks+' '+v.food+' '+v.tags.join(' ')).toLowerCase();if(state.q&&!text.includes(state.q.toLowerCase()))return false;if(state.neighborhood!=='all'&&v.neighborhood!==state.neighborhood)return false;if((state.open||state.time==='open')&&statusFor(v).key!=='open')return false;if(state.time==='late'&&!isLate(v))return false;if(state.price!=='any'&&!(v.beer&&v.beer<=Number(state.price)))return false;return true});if(state.sort==='beer')list.sort((a,b)=>(a.beer??99)-(b.beer??99));if(state.sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name));if(state.sort==='recommended')list.sort((a,b)=>{const sa=statusFor(a).key==='open'?0:1,sb=statusFor(b).key==='open'?0:1;return sa-sb||(a.beer??99)-(b.beer??99)});return list}
+function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase()}
+function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b>`);if(v.drinks&&v.drinks!=='—')parts.push(`<span>${v.drinks}</span>`);if(v.food&&v.food!=='—')parts.push(`<span>${v.food}</span>`);return parts.slice(0,2).join('')||'<span>See venue for current deal</span>'}
+function cardHTML(v,full=false){const s=statusFor(v);return `<article class="venue-row"><div class="venue-main"><div class="venue-avatar">${initials(v.name)}</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" aria-label="Verify ${v.name}">›</a></div></article>`}
+function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?list.map(v=>cardHTML(v,false)).join(''):'<div style="padding:30px">No matching happy hours.</div>';fullGrid.innerHTML=list.length?list.map(v=>cardHTML(v,true)).join(''):'<div style="padding:30px">No matching happy hours.</div>';byId('localClock').textContent=honoluluNow().label;syncRegionMarkers(list)}
+function sync(){byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
+function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();map.setView([21.43,-157.96],10)}
+function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map')setTimeout(()=>map.invalidateSize(),100)}
 
-document.getElementById('searchInput').addEventListener('input',e=>{state.q=e.target.value;document.getElementById('heroSearch').value=state.q;render()});
-document.getElementById('heroSearch').addEventListener('input',e=>{state.q=e.target.value;document.getElementById('searchInput').value=state.q;render()});
-document.getElementById('heroSearch').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('deals').scrollIntoView({behavior:'smooth'})});
-document.getElementById('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render()});
-document.getElementById('openNowFilter').addEventListener('click',()=>{state.open=!state.open;syncInputs();render()});
-document.getElementById('showNowBtn').addEventListener('click',()=>{state.open=true;syncInputs();render();document.getElementById('deals').scrollIntoView({behavior:'smooth'})});
-document.getElementById('cheapFilter').addEventListener('click',()=>{state.cheap=!state.cheap;syncInputs();render()});
-document.getElementById('lateFilter').addEventListener('click',()=>{state.late=!state.late;syncInputs();render()});
-document.getElementById('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});
-document.getElementById('clearFilters').addEventListener('click',()=>{Object.assign(state,{q:"",neighborhood:"all",open:false,cheap:false,late:false,sort:"recommended",preset:null});syncInputs();render()});
-document.querySelectorAll('.quick-card').forEach(b=>b.addEventListener('click',()=>setPreset(b.dataset.preset)));
-const modal=document.getElementById('cityModal');document.getElementById('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};document.getElementById('modalClose').onclick=()=>{modal.classList.remove('open');modal.setAttribute('aria-hidden','true')};modal.querySelector('.modal-backdrop').onclick=document.getElementById('modalClose').onclick;
+const map=L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([21.43,-157.96],10);
+const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles © Esri'}).addTo(map);
+const streets=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+const markerLayer=L.layerGroup().addTo(map);
+function markerIcon(r,count){return L.divIcon({className:'region-marker',html:`<div class="region-pin"><i>⌖</i><span>${r.label}<small>${count} ${count===1?'location':'locations'}</small></span></div>`,iconSize:null})}
+function syncRegionMarkers(list){markerLayer.clearLayers();regions.forEach(r=>{const count=list.filter(v=>v.neighborhood===r.key).length;if(!count&&state.neighborhood!=='all')return;const m=L.marker([r.lat,r.long],{icon:markerIcon(r,count)}).addTo(markerLayer);m.on('click',()=>{state.neighborhood=r.key;sync();render();map.setView([r.lat,r.long],r.zoom)})})}
+function renderCoverage(){const strip=byId('coverageStrip');strip.innerHTML=regions.map(r=>{const count=venues.filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();const r=regions.find(x=>x.key===b.dataset.region);map.setView([r.lat,r.long],r.zoom)}))}
 
-document.getElementById('venueCount').textContent=venues.length;refreshNow();render();setInterval(refreshNow,60000);
+byId('satelliteBtn').onclick=()=>{if(map.hasLayer(streets))map.removeLayer(streets);satellite.addTo(map);byId('satelliteBtn').classList.add('active');byId('streetBtn').classList.remove('active')};
+byId('streetBtn').onclick=()=>{if(map.hasLayer(satellite))map.removeLayer(satellite);streets.addTo(map);byId('streetBtn').classList.add('active');byId('satelliteBtn').classList.remove('active')};
+['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));
+byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();if(state.neighborhood==='all')map.setView([21.43,-157.96],10);else{const r=regions.find(x=>x.key===state.neighborhood);if(r)map.setView([r.lat,r.long],r.zoom)}});
+byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render()});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render()});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render()});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});
+byId('mapViewBtn').onclick=()=>setView('map');byId('listViewBtn').onclick=()=>setView('list');byId('navMap').onclick=()=>setView('map');byId('navList').onclick=()=>setView('list');byId('clearFilters').onclick=clearFilters;byId('clearFilters2').onclick=clearFilters;
+const modal=byId('cityModal');byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=()=>{modal.classList.remove('open');modal.setAttribute('aria-hidden','true')};modal.querySelector('.modal-backdrop').onclick=byId('modalClose').onclick;
+renderCoverage();sync();render();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);

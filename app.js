@@ -38,118 +38,84 @@ const fallbackVenues = [
   {name:"Uncle Bo's Haleiwa", neighborhood:"North Shore", area:"Haleʻiwa", days:"Daily when open", early:"2:00–6:00 PM", late:"—", beer:null, drinks:"Happy-hour drink specials", food:"Happy-hour pupu menu", tags:["northshore","food","local"], source:"https://www.unclebosrestaurant.com/wp-content/uploads/2022/07/HALEIWA-DINNER-MENU-2.pdf", slots:{2:[[14,18]],3:[[14,18]],4:[[14,18]],5:[[14,18]],6:[[14,18]],0:[[14,18]]}},
 ];
 
+const statewideFallbackVenues = [
+  {name:"Gather on Maui",island:"Maui",neighborhood:"Wailea",area:"Wailea",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Daily happy-hour drinks",food:"Discounted small bites",tags:["food","views"],source:"https://gatheronmaui.com/wailea-kihei-happy-hour/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"OAO Sushi Bar & Grill",island:"Maui",neighborhood:"Wailea",area:"Wailea",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour beverage specials",food:"Happy-hour sushi and bites",tags:["sushi","food"],source:"https://www.oaowailea.com/best-happy-hour",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"Tommy Bahama Wailea",island:"Maui",neighborhood:"Wailea",area:"Wailea",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:8,drinks:"Specialty cocktails & wine $5 off; select drafts $8",food:"Selected happy-hour bites",tags:["cocktails","food"],source:"https://www.tommybahama.com/en/restaurants-and-marlin-bars/locations/wailea",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"The Pint & Cork",island:"Maui",neighborhood:"Wailea",area:"Wailea",days:"Daily",early:"2:00–5:00 PM",late:"—",beer:null,drinks:"Discounted drafts, cocktails & wine",food:"Happy-hour sliders and pub bites",tags:["beer","food"],source:"https://mauihappyhours.net/2026/01/05/pint-and-cork-wailea-maui-happy-hour/",slots:{0:[[14,17]],1:[[14,17]],2:[[14,17]],3:[[14,17]],4:[[14,17]],5:[[14,17]],6:[[14,17]]}},
+  {name:"Three's Bar & Grill",island:"Maui",neighborhood:"Kihei",area:"Kīhei",days:"Daily",early:"3:00–6:00 PM",late:"—",beer:null,drinks:"Daily drink specials",food:"Sushi, oysters and small-plate specials",tags:["food","sushi"],source:"https://threesbarandgrill.com/",slots:{0:[[15,18]],1:[[15,18]],2:[[15,18]],3:[[15,18]],4:[[15,18]],5:[[15,18]],6:[[15,18]]}},
+  {name:"Isana Brave Fish Kitchen",island:"Maui",neighborhood:"Kihei",area:"Kīhei",days:"Daily",early:"3:00–5:00 PM",late:"9:00–10:00 PM",beer:null,drinks:"Discounts on select beverages",food:"Discounted sushi and food",tags:["sushi","late"],source:"https://www.isanarestaurant.net/happy-hour-menu",slots:{0:[[15,17],[21,22]],1:[[15,17],[21,22]],2:[[15,17],[21,22]],3:[[15,17],[21,22]],4:[[15,17],[21,22]],5:[[15,17],[21,22]],6:[[15,17],[21,22]]}},
+  {name:"Table at Poipu",island:"Kauai",neighborhood:"Poipu",area:"Poʻipū / Kōloa",days:"Mon–Sat",early:"4:00–5:30 PM",late:"—",beer:5,drinks:"$5 draft/local beer; $8 Mai Tai; $10 select wine",food:"Happy-hour dining menu",tags:["beer","food"],source:"https://tableatpoipu.com/",slots:{1:[[16,17.5]],2:[[16,17.5]],3:[[16,17.5]],4:[[16,17.5]],5:[[16,17.5]],6:[[16,17.5]]}},
+  {name:"RumFire Poipu Beach",island:"Kauai",neighborhood:"Poipu",area:"Poʻipū",days:"Thu–Sun",early:"5:00–6:00 PM",late:"9:00–10:00 PM",beer:6,drinks:"$11 craft cocktails; $9 wine; $6 draft beer",food:"Select happy-hour pupus",tags:["views","late","food"],source:"https://www.rumfirekauai.com/our-menus",slots:{0:[[17,18],[21,22]],4:[[17,18],[21,22]],5:[[17,18],[21,22]],6:[[17,18],[21,22]]}},
+  {name:"Kauai Island Brewing Company",island:"Kauai",neighborhood:"Port Allen",area:"Port Allen / ʻEleʻele",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"$2 off house beer & house seltzer",food:"$2 off pupus",tags:["brewery","food"],source:"https://kauaiislandbrewing.com/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"Brennecke's Beach Broiler",island:"Kauai",neighborhood:"Poipu",area:"Poʻipū",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour drink specials",food:"Happy-hour pupu specials",tags:["views","food"],source:"https://brenneckes.com/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"Lava Lava Beach Club Kauai",island:"Kauai",neighborhood:"Kapaa",area:"Kapaʻa",days:"Daily",early:"3:00–5:00 PM",late:"Drinks to 6:00 PM",beer:null,drinks:"$2 off draught beer; happy-hour cocktails",food:"Happy-hour pupus",tags:["beach","food"],source:"https://lavalavabeachclub.com/kauai/",slots:{0:[[15,18]],1:[[15,18]],2:[[15,18]],3:[[15,18]],4:[[15,18]],5:[[15,18]],6:[[15,18]]}},
+  {name:"Jackie Rey's Ohana Grill Hilo",island:"Hawaii",neighborhood:"Hilo",area:"Hilo",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:6,drinks:"$6 draft beer; $7 classics; $9 wine",food:"Happy-hour pupu picks",tags:["food","local"],source:"https://www.jackiereyshilo.com/happy-hour-menu",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"On The Rocks",island:"Hawaii",neighborhood:"Kona",area:"Kailua-Kona",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour cocktails and beer",food:"Happy-hour pupus",tags:["beach","music","food"],source:"https://www.huggosontherocks.com/menu/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"Don's Mai Tai Bar & Restaurant",island:"Hawaii",neighborhood:"Kona",area:"Kailua-Kona",days:"Daily",early:"4:00–6:00 PM",late:"—",beer:null,drinks:"Happy-hour cocktails and drink specials",food:"Happy-hour pupus",tags:["views","cocktails"],source:"https://www.royalkona.com/dining",slots:{0:[[16,18]],1:[[16,18]],2:[[16,18]],3:[[16,18]],4:[[16,18]],5:[[16,18]],6:[[16,18]]}},
+  {name:"Lava Lava Beach Club Waikoloa",island:"Hawaii",neighborhood:"Waikoloa",area:"Waikōloa",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour tropical drinks and beer",food:"Happy-hour pupus",tags:["beach","food"],source:"https://lavalavabeachclub.com/bigisland/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}}
+];
+
 
 const SUPABASE_URL = "https://woygwngmfdkwotopkeur.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ovVbmHBT-ROEjmM6Vc48_w_qGrX7y5t";
-let venues = [...fallbackVenues];
+const islandNames={Oahu:"Oʻahu",Maui:"Maui",Hawaii:"Hawaiʻi Island",Kauai:"Kauaʻi"};
+const oahuFallback=fallbackVenues.map(v=>({...v,island:"Oahu"}));
+let venues=[...oahuFallback,...statewideFallbackVenues];
 
-function rowToVenue(row){
-  return {
-    name: row.venue_name,
-    neighborhood: row.neighborhood || row.area || "",
-    area: row.area || row.neighborhood || "",
-    days: row.days || "Confirm hours",
-    early: row.early_display || "Confirm current hours",
-    late: row.late_display || "—",
-    beer: row.cheapest_beer == null ? null : Number(row.cheapest_beer),
-    drinks: row.drink_highlight || "—",
-    food: row.food_highlight || "—",
-    tags: Array.isArray(row.tags) ? row.tags : [],
-    source: row.source_url || "#",
-    slots: row.schedule && typeof row.schedule === "object" ? row.schedule : {}
-  };
-}
-
+function rowToVenue(row){return {
+  id:row.id,name:row.venue_name,island:row.island||"Oahu",city:row.city||"",
+  neighborhood:row.neighborhood||row.area||"",area:row.area||row.neighborhood||"",
+  address:row.address||"",latitude:row.latitude==null?null:Number(row.latitude),longitude:row.longitude==null?null:Number(row.longitude),
+  days:row.days||"Confirm hours",early:row.early_display||"Confirm current hours",late:row.late_display||"—",
+  beer:row.cheapest_beer==null?null:Number(row.cheapest_beer),drinks:row.drink_highlight||"—",food:row.food_highlight||"—",
+  tags:Array.isArray(row.tags)?row.tags:[],source:row.source_url||"#",slots:row.schedule&&typeof row.schedule==="object"?row.schedule:{}
+}}
 async function loadVenuesFromSupabase(){
-  const fields = [
-    "venue_name","area","neighborhood","days","early_display","late_display",
-    "cheapest_beer","drink_highlight","food_highlight","source_url","tags","schedule"
-  ].join(",");
-  const url = `${SUPABASE_URL}/rest/v1/happy_hours?select=${encodeURIComponent(fields)}&active=eq.true&order=venue_name.asc`;
-  try {
-    const response = await fetch(url, {
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        Accept: "application/json"
-      }
-    });
-    if(!response.ok) throw new Error(`Supabase ${response.status}`);
-    const rows = await response.json();
-    if(!Array.isArray(rows) || !rows.length) throw new Error("No active venues returned");
-    venues = rows.map(rowToVenue);
-    renderCoverage();
-    sync();
-    render();
-    renderMapMarkers();
-    document.documentElement.dataset.dataSource = "supabase";
-  } catch (error) {
-    console.warn("HappyHr.Me is using the bundled venue fallback because Supabase could not be reached.", error);
-    document.documentElement.dataset.dataSource = "fallback";
-  }
+  const url=`${SUPABASE_URL}/rest/v1/happy_hours?select=*&active=eq.true&order=venue_name.asc`;
+  try{const response=await fetch(url,{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,Accept:"application/json"}});if(!response.ok)throw new Error(`Supabase ${response.status}`);const rows=await response.json();if(!Array.isArray(rows)||!rows.length)throw new Error("No active venues returned");venues=rows.map(rowToVenue);document.documentElement.dataset.dataSource="supabase";refreshAll();}
+  catch(error){console.warn("Using bundled fallback because Supabase could not be reached.",error);document.documentElement.dataset.dataSource="fallback";refreshAll();}
 }
 
-const regions = [
-  {key:"North Shore",label:"North Shore / Haleʻiwa",lat:21.593,long:-158.104,zoom:12},
-  {key:"Windward",label:"Kailua / Kāneʻohe",lat:21.407,long:-157.744,zoom:12},
-  {key:"Central",label:"Aiea / Pearl City",lat:21.397,long:-157.965,zoom:12},
-  {key:"West Oahu",label:"Kapolei / Ko Olina",lat:21.338,long:-158.123,zoom:12},
-  {key:"East Honolulu",label:"Kaimukī / Kāhala",lat:21.278,long:-157.789,zoom:13},
-  {key:"Ala Moana",label:"Ala Moana",lat:21.291,long:-157.843,zoom:14},
-  {key:"Kakaako",label:"Kakaʻako",lat:21.297,long:-157.858,zoom:14},
-  {key:"Waikiki",label:"Waikīkī",lat:21.279,long:-157.829,zoom:14}
-];
-
-const state={q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended",view:"map"};
-const byId=id=>document.getElementById(id);
-const grid=byId('venueGrid'), fullGrid=byId('venueGridFull'), resultCount=byId('resultCount');
-
-function honoluluNow(){
-  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Pacific/Honolulu',weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());
-  const map=Object.fromEntries(parts.map(p=>[p.type,p.value])); const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}; let hour=Number(map.hour);if(hour===24)hour=0;
-  return {day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`};
-}
+const islandConfigs={
+ Oahu:{label:"Oʻahu",center:[21.43,-157.98],zoom:10,bounds:[[21.242,-158.305],[21.725,-157.615]],regions:[
+  {key:"North Shore",label:"North Shore / Haleʻiwa",lat:21.593,long:-158.104,zoom:12},{key:"Windward",label:"Kailua / Kāneʻohe",lat:21.407,long:-157.744,zoom:12},{key:"Central",label:"Aiea / Pearl City",lat:21.397,long:-157.965,zoom:12},{key:"West Oahu",label:"Kapolei / Ko Olina",lat:21.338,long:-158.123,zoom:12},{key:"East Honolulu",label:"Kaimukī / Kāhala",lat:21.278,long:-157.789,zoom:13},{key:"Ala Moana",label:"Ala Moana",lat:21.291,long:-157.843,zoom:14},{key:"Kakaako",label:"Kakaʻako",lat:21.297,long:-157.858,zoom:14},{key:"Waikiki",label:"Waikīkī",lat:21.279,long:-157.829,zoom:14}]},
+ Maui:{label:"Maui",center:[20.80,-156.34],zoom:10,bounds:[[20.53,-156.75],[21.08,-156.02]],regions:[
+  {key:"Wailea",label:"Wailea",lat:20.686,long:-156.440,zoom:13},{key:"Kihei",label:"Kīhei",lat:20.749,long:-156.457,zoom:13},{key:"Kahului",label:"Kahului / Wailuku",lat:20.889,long:-156.474,zoom:12},{key:"Kaanapali",label:"Kāʻanapali",lat:20.927,long:-156.696,zoom:13},{key:"Lahaina",label:"Lāhainā / Kahana",lat:20.908,long:-156.680,zoom:12},{key:"Paia",label:"Pāʻia / Upcountry",lat:20.915,long:-156.381,zoom:12}]},
+ Kauai:{label:"Kauaʻi",center:[22.05,-159.50],zoom:10,bounds:[[21.83,-159.82],[22.27,-159.25]],regions:[
+  {key:"Poipu",label:"Poʻipū / Kōloa",lat:21.881,long:-159.469,zoom:13},{key:"Lihue",label:"Līhuʻe",lat:21.974,long:-159.368,zoom:13},{key:"Kapaa",label:"Kapaʻa",lat:22.075,long:-159.319,zoom:13},{key:"Hanalei",label:"Hanalei / North Shore",lat:22.204,long:-159.497,zoom:12},{key:"Port Allen",label:"Port Allen / Waimea",lat:21.900,long:-159.583,zoom:12}]},
+ Hawaii:{label:"Hawaiʻi Island",center:[19.60,-155.52],zoom:8,bounds:[[18.85,-156.15],[20.35,-154.75]],regions:[
+  {key:"Kona",label:"Kailua-Kona",lat:19.640,long:-155.996,zoom:12},{key:"Waikoloa",label:"Waikōloa / Kohala",lat:19.925,long:-155.887,zoom:11},{key:"Hilo",label:"Hilo",lat:19.724,long:-155.086,zoom:12},{key:"Puna",label:"Puna",lat:19.49,long:-154.95,zoom:11}]}
+};
+const state={q:"",island:"Oahu",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended",view:"map"};
+const byId=id=>document.getElementById(id),grid=byId('venueGrid'),fullGrid=byId('venueGridFull'),resultCount=byId('resultCount');
+function track(name,params={}){try{if(typeof gtag==='function')gtag('event',name,params)}catch(e){}}
+function honoluluNow(){const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Pacific/Honolulu',weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};let hour=Number(map.hour);if(hour===24)hour=0;return{day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`}}
 function statusFor(v){const n=honoluluNow(),slots=v.slots[n.day]||[];for(const[s,e]of slots){if(n.hour>=s&&n.hour<e)return{key:'open',label:'Open now'}}const future=slots.find(([s])=>s>n.hour);if(future){let h=Math.floor(future[0]),m=future[0]%1?30:0;return{key:'later',label:`Starts ${h>12?h-12:h}:${m?'30':'00'} ${h>=12?'PM':'AM'}`}}return{key:'closed',label:slots.length?'Done today':'Check hours'}}
 function isLate(v){return v.tags.includes('late')||v.late!=='—'}
-function filtered(){let list=venues.filter(v=>{const text=(v.name+' '+v.area+' '+v.drinks+' '+v.food+' '+v.tags.join(' ')).toLowerCase();if(state.q&&!text.includes(state.q.toLowerCase()))return false;if(state.neighborhood!=='all'&&v.neighborhood!==state.neighborhood)return false;if((state.open||state.time==='open')&&statusFor(v).key!=='open')return false;if(state.time==='late'&&!isLate(v))return false;if(state.price!=='any'&&!(v.beer&&v.beer<=Number(state.price)))return false;return true});if(state.sort==='beer')list.sort((a,b)=>(a.beer??99)-(b.beer??99));if(state.sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name));if(state.sort==='recommended')list.sort((a,b)=>{const sa=statusFor(a).key==='open'?0:1,sb=statusFor(b).key==='open'?0:1;return sa-sb||(a.beer??99)-(b.beer??99)});return list}
+function filtered(){let list=venues.filter(v=>{if(v.island!==state.island)return false;const text=(v.name+' '+v.area+' '+v.drinks+' '+v.food+' '+v.tags.join(' ')).toLowerCase();if(state.q&&!text.includes(state.q.toLowerCase()))return false;if(state.neighborhood!=='all'&&v.neighborhood!==state.neighborhood)return false;if((state.open||state.time==='open')&&statusFor(v).key!=='open')return false;if(state.time==='late'&&!isLate(v))return false;if(state.price!=='any'&&!(v.beer&&v.beer<=Number(state.price)))return false;return true});if(state.sort==='beer')list.sort((a,b)=>(a.beer??99)-(b.beer??99));if(state.sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name));if(state.sort==='recommended')list.sort((a,b)=>{const sa=statusFor(a).key==='open'?0:1,sb=statusFor(b).key==='open'?0:1;return sa-sb||(a.beer??99)-(b.beer??99)});return list}
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase()}
 function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b>`);if(v.drinks&&v.drinks!=='—')parts.push(`<span>${v.drinks}</span>`);if(v.food&&v.food!=='—')parts.push(`<span>${v.food}</span>`);return parts.slice(0,2).join('')||'<span>See venue for current deal</span>'}
-function cardHTML(v,full=false){const s=statusFor(v);return `<article class="venue-row"><div class="venue-main"><div class="venue-avatar">${initials(v.name)}</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" aria-label="Verify ${v.name}">›</a></div></article>`}
-function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?list.map(v=>cardHTML(v,false)).join(''):'<div style="padding:30px">No matching happy hours.</div>';fullGrid.innerHTML=list.length?list.map(v=>cardHTML(v,true)).join(''):'<div style="padding:30px">No matching happy hours.</div>';byId('localClock').textContent=honoluluNow().label}
-function sync(){byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
-function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();if(hhMap)byId('recenterMap').click()}
-function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>hhMap.invalidateSize(),80)}
+function cardHTML(v,full=false){const s=statusFor(v);return `<article class="venue-row"><div class="venue-main"><div class="venue-avatar">${initials(v.name)}</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
+function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?list.map(v=>cardHTML(v,false)).join(''):'<div style="padding:30px">No matching happy hours yet. We are expanding this island now.</div>';fullGrid.innerHTML=list.length?list.map(v=>cardHTML(v,true)).join(''):'<div style="padding:30px">No matching happy hours yet.</div>';byId('localClock').textContent=honoluluNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
+function sync(){byId('islandFilter').value=state.island;byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
+function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();fitCurrentIsland();track('filters_cleared',{island:state.island})}
+function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>hhMap.invalidateSize(),80);track('view_change',{view:mode,island:state.island})}
+function updateContextText(){const label=islandNames[state.island];byId('cityPill').textContent=`${label} ▾`;byId('heroEyebrow').textContent=`${label.toUpperCase()} · CURATED HAPPY HOURS`;byId('heroDescription').textContent=`Find current drink and food deals around ${label} — by area, time and price.`;byId('mapBadgeTitle').textContent=label;byId('resultsTitle').textContent=`Deals around ${label}`;byId('fullListTitle').textContent=`All ${label} happy hours`;buildAreaOptions()}
+function buildAreaOptions(){const select=byId('neighborhoodFilter'),cfg=islandConfigs[state.island];select.innerHTML='<option value="all">⌖ All areas</option>'+cfg.regions.map(r=>`<option value="${r.key}">${r.label}</option>`).join('');}
+function setIsland(island){if(!islandConfigs[island])return;state.island=island;state.neighborhood='all';updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland();closeModal();history.replaceState(null,'',`${location.pathname}?island=${encodeURIComponent(island)}`);track('island_select',{island})}
 
-let hhMap, satelliteLayer, regionMarkers=[];
-function renderMapMarkers(){
-  if(!hhMap || !window.L) return;
-  regionMarkers.forEach(m=>hhMap.removeLayer(m));
-  regionMarkers=[];
-  regions.forEach(r=>{
-    const count=venues.filter(v=>v.neighborhood===r.key).length;
-    const icon=L.divIcon({className:'region-marker',html:`<div class="region-pin" data-region="${r.key}"><i>●</i><span>${r.label}<small>${count} spot${count===1?'':'s'}</small></span></div>`,iconSize:null,iconAnchor:[15,15]});
-    const m=L.marker([r.lat,r.long],{icon}).addTo(hhMap);
-    m.on('click',()=>{state.neighborhood=r.key;sync();render();renderCoverage();});
-    regionMarkers.push(m);
-  });
-}
-function initMap(){
-  if(!window.L || hhMap) return;
-  hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});
-  const bounds=L.latLngBounds([[21.242,-158.305],[21.725,-157.615]]);
-  satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);
-  hhMap.fitBounds(bounds,{padding:[18,18]});
-  renderMapMarkers();
-  byId('recenterMap')?.addEventListener('click',()=>hhMap.fitBounds(bounds,{padding:[18,18]}));
-  setTimeout(()=>hhMap.invalidateSize(),150);
-  window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100));
-}
-function syncRegionMarkers(){ if(hhMap) setTimeout(()=>hhMap.invalidateSize(),80); }
-function renderCoverage(){const strip=byId('coverageStrip');strip.innerHTML=regions.map(r=>{const count=venues.filter(v=>v.neighborhood===r.key).length;const active=state.neighborhood===r.key?' active':'';return `<button class="coverage-chip${active}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=regions.find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7})}))}
-
+let hhMap,regionMarkers=[];
+function currentRegions(){return islandConfigs[state.island].regions}
+function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];currentRegions().forEach(r=>{const count=venues.filter(v=>v.island===state.island&&v.neighborhood===r.key).length;const icon=L.divIcon({className:'region-marker',html:`<div class="region-pin"><i>●</i><span>${r.label}<small>${count} spot${count===1?'':'s'}</small></span></div>`,iconSize:null,iconAnchor:[15,15]});const marker=L.marker([r.lat,r.long],{icon}).addTo(hhMap);marker.on('click',()=>{state.neighborhood=r.key;sync();render();renderCoverage();track('map_region_click',{island:state.island,area:r.label})});regionMarkers.push(marker)})}
+function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}
+function initMap(){if(!window.L||hhMap)return;hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);fitCurrentIsland();renderMapMarkers();byId('recenterMap')?.addEventListener('click',fitCurrentIsland);setTimeout(()=>hhMap.invalidateSize(),150);window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100))}
+function renderCoverage(){const strip=byId('coverageStrip');strip.innerHTML=currentRegions().map(r=>{const count=venues.filter(v=>v.island===state.island&&v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=currentRegions().find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:b.textContent})}))}
+function refreshAll(){updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland()}
 ['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));
-byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();renderCoverage();const r=regions.find(x=>x.key===state.neighborhood);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7})});
-byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render()});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render()});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render()});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});
+byId('islandFilter').addEventListener('change',e=>setIsland(e.target.value));byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();renderCoverage();const r=currentRegions().find(x=>x.key===state.neighborhood);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:e.target.value})});
+byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render();track('time_filter',{value:e.target.value})});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render();track('price_filter',{value:e.target.value})});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render();track('open_now_filter',{enabled:e.target.checked})});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});
 byId('mapViewBtn').onclick=()=>setView('map');byId('listViewBtn').onclick=()=>setView('list');byId('navMap').onclick=()=>setView('map');byId('navList').onclick=()=>setView('list');byId('clearFilters').onclick=clearFilters;byId('clearFilters2').onclick=clearFilters;
-const modal=byId('cityModal');byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=()=>{modal.classList.remove('open');modal.setAttribute('aria-hidden','true')};modal.querySelector('.modal-backdrop').onclick=byId('modalClose').onclick;
-renderCoverage();sync();render();initMap();loadVenuesFromSupabase();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);
+const modal=byId('cityModal');function closeModal(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true')}byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=closeModal;modal.querySelector('.modal-backdrop').onclick=closeModal;modal.querySelectorAll('[data-island]').forEach(b=>b.addEventListener('click',()=>setIsland(b.dataset.island)));
+const params=new URLSearchParams(location.search);if(islandConfigs[params.get('island')])state.island=params.get('island');const requestedArea=params.get('area');updateContextText();if(requestedArea&&currentRegions().some(r=>r.key===requestedArea))state.neighborhood=requestedArea;
+sync();renderCoverage();render();initMap();loadVenuesFromSupabase();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);

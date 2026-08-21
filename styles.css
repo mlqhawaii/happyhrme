@@ -66,3 +66,8 @@
 .about-section::after{content:"";position:absolute;z-index:-1;right:0;top:0;width:44%;height:100%;background-image:linear-gradient(90deg,#0d2938 0%,rgba(13,41,56,.72) 45%,rgba(13,41,56,.35) 100%),url("https://images.unsplash.com/photo-1770910045351-bfc82a229b50?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=60&w=1800");background-size:cover;background-position:center;opacity:.46}
 @media(max-width:900px){.hero::after{width:70%;opacity:.2}.finder-section::before{width:72%;opacity:.1}.about-section::after{width:70%;opacity:.28}}
 @media(max-width:600px){.hero::after,.finder-section::before,.about-section::after{display:none}}
+
+
+/* Statewide expansion */
+#islandFilter{font-weight:800;border-color:#a9d8d6;background:#f3fbfa}.guide-section{padding:64px 0;background:#fff;border-top:1px solid var(--line)}.guide-section h2{font:800 38px/1.05 'Manrope',sans-serif;letter-spacing:-1.5px;margin:8px 0 28px}.guide-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.guide-grid a{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border:1px solid var(--line);border-radius:14px;color:var(--ink);font-weight:800;text-decoration:none;background:#fff;transition:.15s}.guide-grid a:hover{border-color:var(--teal);background:var(--teal-soft);transform:translateY(-1px)}.guide-grid a span{color:var(--teal)}
+@media(max-width:1000px){.guide-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.guide-grid{grid-template-columns:1fr}.guide-section{padding:42px 0}.guide-section h2{font-size:31px}}

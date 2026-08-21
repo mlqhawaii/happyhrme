@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="HourJoy helps you find the best happy hours happening now in Honolulu, with current drink and food deals, late-night specials, and neighborhood filters." />
+  <title>HourJoy — Happy hour, wherever you are.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="#top" aria-label="HourJoy home">
+        <span class="brand-mark" aria-hidden="true"><span></span></span>
+        <span>HourJoy</span>
+      </a>
+      <nav>
+        <a href="#deals">Happy hours</a>
+        <a href="#quick-picks">Quick picks</a>
+        <a href="#about">About</a>
+      </nav>
+      <button class="city-pill" id="cityPill" type="button"><span class="dot"></span> Honolulu ▾</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="shell hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow">HONOLULU • CURATED & CHECKED</div>
+          <h1>Happy hour,<br><span>without the hunt.</span></h1>
+          <p>Find the best drink and food deals happening around you — sorted by time, neighborhood and price.</p>
+          <div class="hero-search">
+            <span aria-hidden="true">⌕</span>
+            <input id="heroSearch" type="search" placeholder="Search a venue or neighborhood…" autocomplete="off" />
+            <button id="showNowBtn" type="button">Show open now</button>
+          </div>
+          <div class="hero-meta">
+            <span><strong id="venueCount">22</strong> venues</span>
+            <span><strong id="localClock">—</strong> HST</span>
+            <span>Last checked Aug 20, 2026</span>
+          </div>
+        </div>
+        <aside class="now-card">
+          <div class="now-card-top">
+            <span class="pulse"></span>
+            <span>HAPPENING NOW</span>
+          </div>
+          <h2 id="nowCount">Checking…</h2>
+          <p>happy hours are active right now in Honolulu.</p>
+          <div id="nowPreview" class="now-preview"></div>
+          <a href="#deals" id="seeNowLink">See what’s pouring →</a>
+        </aside>
+      </div>
+    </section>
+
+    <section class="stats-band">
+      <div class="shell stats-grid">
+        <div><strong>Waikīkī</strong><span>rooftops, hotel bars & late-night</span></div>
+        <div><strong>Kakaʻako</strong><span>breweries, sushi & local favorites</span></div>
+        <div><strong>Ala Moana</strong><span>long happy hours & easy meetups</span></div>
+        <div><strong>Updated regularly</strong><span>source links on every listing</span></div>
+      </div>
+    </section>
+
+    <section id="quick-picks" class="quick-section shell">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">QUICK PICKS</div>
+          <h2>Skip straight to the good stuff.</h2>
+        </div>
+        <p>Useful shortcuts based on the current Honolulu list.</p>
+      </div>
+      <div class="quick-grid">
+        <button class="quick-card" data-preset="cheap"><span>🍺</span><div><small>CHEAPEST BEER</small><strong>$4 deals</strong><em>The Row + The Seaside</em></div></button>
+        <button class="quick-card" data-preset="late"><span>🌙</span><div><small>LATE NIGHT</small><strong>After 9 PM</strong><em>Earls, Chart House, Doraku</em></div></button>
+        <button class="quick-card" data-preset="rooftop"><span>🌇</span><div><small>ROOFTOP</small><strong>Sunset deals</strong><em>SKY Waikiki + Tommy Bahama</em></div></button>
+        <button class="quick-card" data-preset="food"><span>🍽️</span><div><small>FOOD VALUE</small><strong>Best bites</strong><em>Moku + Butcher Bar</em></div></button>
+      </div>
+    </section>
+
+    <section id="deals" class="deals-section">
+      <div class="shell">
+        <div class="section-heading deals-head">
+          <div>
+            <div class="eyebrow">HONOLULU HAPPY HOURS</div>
+            <h2>Find your next stop.</h2>
+          </div>
+          <div class="result-count"><strong id="resultCount">22</strong> matching spots</div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-mini"><span>⌕</span><input id="searchInput" type="search" placeholder="Search venues…" /></div>
+          <select id="neighborhoodFilter" aria-label="Neighborhood">
+            <option value="all">All neighborhoods</option>
+            <option value="Waikiki">Waikīkī</option>
+            <option value="Kakaako">Kakaʻako</option>
+            <option value="Ala Moana">Ala Moana</option>
+          </select>
+          <button class="filter-toggle" id="openNowFilter" type="button">● Open now</button>
+          <button class="filter-toggle" id="cheapFilter" type="button">Beer ≤ $6</button>
+          <button class="filter-toggle" id="lateFilter" type="button">Late night</button>
+          <select id="sortSelect" aria-label="Sort listings">
+            <option value="recommended">Recommended</option>
+            <option value="beer">Lowest beer price</option>
+            <option value="name">A–Z</option>
+          </select>
+          <button class="clear-btn" id="clearFilters" type="button">Clear</button>
+        </div>
+
+        <div id="venueGrid" class="venue-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="about" class="about-section">
+      <div class="shell about-grid">
+        <div>
+          <div class="eyebrow">BUILT TO TRAVEL</div>
+          <h2>Honolulu first.<br>Every city next.</h2>
+        </div>
+        <div>
+          <p>HourJoy is designed to become a city-by-city happy-hour guide that answers one simple question: <strong>where can I get a good deal right now?</strong></p>
+          <p>Listings link back to the venue or published source so you can verify details before you go. Happy-hour menus change, so accuracy and recent checks matter.</p>
+          <div class="coming-cities"><span>Coming next</span><b>Los Angeles</b><b>New York</b><b>Tokyo</b><b>Sydney</b><b>London</b></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-row">
+      <a class="brand footer-brand" href="#top"><span class="brand-mark"><span></span></span><span>HourJoy</span></a>
+      <p>Happy hour, wherever you are.</p>
+      <span>Honolulu MVP • 2026</span>
+    </div>
+  </footer>
+
+  <div id="cityModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Choose a city">
+      <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+      <small>CHOOSE A CITY</small>
+      <h3>Where are you drinking?</h3>
+      <button class="city-choice active">Honolulu <span>Live</span></button>
+      <button class="city-choice" disabled>Los Angeles <span>Coming soon</span></button>
+      <button class="city-choice" disabled>New York <span>Coming soon</span></button>
+      <button class="city-choice" disabled>Tokyo <span>Coming soon</span></button>
+      <button class="city-choice" disabled>Sydney <span>Coming soon</span></button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

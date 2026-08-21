@@ -36,3 +36,22 @@
 .leaflet-control-attribution{font-size:8px;background:rgba(255,255,255,.7)!important}
 @media(max-width:1120px){.map-panel{height:520px}}
 @media(max-width:760px){.map-panel{height:430px}}
+
+
+/* Leaflet critical layout fallback — keeps map tiles correctly positioned even if CDN CSS is delayed */
+.leaflet-container{overflow:hidden;position:relative;-webkit-tap-highlight-color:transparent}
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box{position:absolute;left:0;top:0}
+.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;left:0;top:0;width:100%;height:100%}
+.leaflet-map-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-tile{filter:inherit;visibility:hidden;width:256px!important;height:256px!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important}
+.leaflet-tile-loaded{visibility:inherit}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-container .leaflet-marker-icon,.leaflet-container .leaflet-marker-shadow,.leaflet-container .leaflet-tile{user-select:none;-webkit-user-drag:none}
+.leaflet-container img{max-width:none!important;max-height:none!important}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}.leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}
+.leaflet-control-zoom{border:2px solid rgba(0,0,0,.2);border-radius:8px;background:#fff;overflow:hidden}.leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;background:#fff;border-bottom:1px solid #ddd;font-size:20px}.leaflet-control-zoom a:last-child{border-bottom:0}
+.leaflet-control-attribution{background:rgba(255,255,255,.78);padding:0 5px;color:#333}
+.leaflet-control-attribution a{color:#08716f}
+#map .leaflet-tile-pane{width:100%;height:100%}

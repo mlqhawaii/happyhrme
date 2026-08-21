@@ -55,3 +55,14 @@
 .leaflet-control-attribution{background:rgba(255,255,255,.78);padding:0 5px;color:#333}
 .leaflet-control-attribution a{color:#08716f}
 #map .leaflet-tile-pane{width:100%;height:100%}
+
+
+/* Subtle restaurant imagery — adds warmth without competing with the app */
+.hero{position:relative;isolation:isolate;overflow:hidden}
+.hero::after{content:"";position:absolute;z-index:-1;right:-5%;top:0;width:48%;height:100%;background-image:linear-gradient(90deg,rgba(255,255,255,1) 0%,rgba(255,255,255,.82) 28%,rgba(255,255,255,.5) 100%),url("https://images.unsplash.com/photo-1770910045351-bfc82a229b50?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=60&w=1800");background-size:cover;background-position:center;border-radius:0 0 0 56px;opacity:.34;filter:saturate(.9)}
+.finder-section{position:relative;isolation:isolate;overflow:hidden}
+.finder-section::before{content:"";position:absolute;z-index:-1;left:-7%;bottom:-70px;width:42%;height:420px;background-image:linear-gradient(180deg,rgba(247,250,249,1) 0%,rgba(247,250,249,.72) 35%,rgba(247,250,249,.28) 100%),url("https://images.unsplash.com/photo-1750124798991-6fd8a8e0265f?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=60&w=1800");background-size:cover;background-position:center;border-radius:0 80px 0 0;opacity:.18;filter:saturate(.9)}
+.about-section{position:relative;isolation:isolate;overflow:hidden}
+.about-section::after{content:"";position:absolute;z-index:-1;right:0;top:0;width:44%;height:100%;background-image:linear-gradient(90deg,#0d2938 0%,rgba(13,41,56,.72) 45%,rgba(13,41,56,.35) 100%),url("https://images.unsplash.com/photo-1770910045351-bfc82a229b50?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=60&w=1800");background-size:cover;background-position:center;opacity:.46}
+@media(max-width:900px){.hero::after{width:70%;opacity:.2}.finder-section::before{width:72%;opacity:.1}.about-section::after{width:70%;opacity:.28}}
+@media(max-width:600px){.hero::after,.finder-section::before,.about-section::after{display:none}}

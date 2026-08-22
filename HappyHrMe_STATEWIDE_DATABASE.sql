@@ -7,6 +7,9 @@ alter table public.happy_hours add column if not exists state text default 'HI';
 alter table public.happy_hours add column if not exists country text default 'US';
 
 update public.happy_hours set island='Oahu' where island is null or btrim(island)='';
+update public.happy_hours set island='Oahu' where island in ('Oʻahu','O‘ahu','Oahu');
+update public.happy_hours set island='Kauai' where island in ('Kauaʻi','Kaua‘i','Kauai');
+update public.happy_hours set island='Hawaii' where island in ('Hawaiʻi','Hawai‘i','Hawaii','Hawaiʻi Island','Hawai‘i Island','Hawaii Island','Big Island');
 update public.happy_hours set city='Honolulu' where island='Oahu' and (city is null or btrim(city)='');
 update public.happy_hours set state='HI' where state is null;
 update public.happy_hours set country='US' where country is null;

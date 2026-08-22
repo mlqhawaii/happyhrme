@@ -22,6 +22,13 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+<div id="city-detect-banner" class="city-detect-banner" hidden>
+  <span id="city-detect-text">Showing happy hours near you.</span>
+  <button id="city-detect-use" type="button">Use this city</button>
+  <button id="city-detect-change" type="button">Choose another</button>
+</div>
+
 <header class="site-header"><div class="shell nav-wrap"><a class="brand brand-image-link" href="#top" aria-label="HappyHr.Me home"><img class="brand-reference" src="brand-reference.png" alt="HappyHr.Me" /></a><nav class="desktop-nav"><a class="active" href="#finder">Happy hours</a><a href="#finder" id="navMap">Map</a><a href="#finder" id="navList">List</a><a href="#guides">Guides</a><a href="#about">About</a></nav><div class="nav-actions"><div class="nav-search"><span>⌕</span><input id="headerSearch" type="search" placeholder="Search bars, restaurants…"></div><button class="city-pill" id="cityPill" type="button">Oʻahu ▾</button></div></div></header>
 <main id="top">
 <section class="hero shell"><div class="hero-copy"><div class="eyebrow" id="heroEyebrow">OʻAHU · CURATED HAPPY HOURS</div><h1>Happy hour,<br>without the hunt.</h1><p id="heroDescription">Find current drink and food deals around Oʻahu — by area, time and price.</p></div><div class="hero-features"><div><span class="feature-icon">◷</span><p><strong>Checked regularly</strong><small>Weekly automated source checks.</small></p></div><div><span class="feature-icon">◇</span><p><strong>Curated quality</strong><small>Real venue deals with source links.</small></p></div><div><span class="feature-icon">⌖</span><p><strong>Four islands</strong><small>Oʻahu, Maui, Kauaʻi & Hawaiʻi Island.</small></p></div></div></section>
@@ -36,4 +43,117 @@
 <section id="about" class="about-section"><div class="shell about-grid"><div><span class="eyebrow">BUILT IN HAWAIʻI</span><h2>Your island.<br>Your happy hour.</h2></div><div><p>HappyHr.Me answers one simple question: <strong>where can I get a good deal right now?</strong> Listings are tied to a venue or published source and checked regularly.</p><p>Coverage now spans Oʻahu, Maui, Kauaʻi and Hawaiʻi Island, with more venues being added continuously.</p></div></div></section></main>
 <footer><div class="shell footer-row"><a class="brand footer-brand brand-image-link" href="#top"><img class="brand-reference footer-brand-reference" src="brand-reference.png" alt="HappyHr.Me" /></a><p>Curated happy hours. Real deals. Good vibes.</p><span>Hawaiʻi · 2026</span></div></footer>
 <div id="cityModal" class="modal" aria-hidden="true"><div class="modal-backdrop"></div><div class="modal-card" role="dialog" aria-modal="true"><button id="modalClose" class="modal-close">×</button><small>CHOOSE AN ISLAND</small><h3>Where are you drinking?</h3><button class="city-choice" data-island="Oahu">Oʻahu <span>Live</span></button><button class="city-choice" data-island="Maui">Maui <span>Live</span></button><button class="city-choice" data-island="Kauai">Kauaʻi <span>Live</span></button><button class="city-choice" data-island="Hawaii">Hawaiʻi Island <span>Live</span></button></div></div>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js"></script></body></html>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  const MARKET_KEY = 'happyhr:selectedMarket';
+  const CITY_KEY = 'happyhr:selectedCity';
+  const COUNTRY_KEY = 'happyhr:selectedCountry';
+
+  function slugify(v){
+    return (v||'').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[ʻ’']/g,'')
+      .replace(/&/g,'and')
+      .replace(/[^a-z0-9]+/g,'-')
+      .replace(/^-+|-+$/g,'');
+  }
+
+  const supported = {
+    'honolulu':'Honolulu',
+    'maui':'Maui',
+    'kauai':'Kauai',
+    'hawaii-island':'Hawaii Island',
+    'los-angeles':'Los Angeles',
+    'san-diego':'San Diego',
+    'san-francisco':'San Francisco',
+    'seattle':'Seattle',
+    'portland':'Portland',
+    'las-vegas':'Las Vegas',
+    'phoenix':'Phoenix',
+    'denver':'Denver',
+    'austin':'Austin',
+    'dallas':'Dallas',
+    'houston':'Houston',
+    'san-antonio':'San Antonio',
+    'chicago':'Chicago',
+    'nashville':'Nashville',
+    'new-york':'New York',
+    'boston':'Boston',
+    'washington-dc':'Washington DC',
+    'philadelphia':'Philadelphia',
+    'atlanta':'Atlanta',
+    'miami':'Miami',
+    'tampa':'Tampa',
+    'new-orleans':'New Orleans'
+  };
+
+  window.HAPPYHR_SUPPORTED_MARKETS = supported;
+
+  window.happyHrSetMarket = function(market, city, country, source){
+    try {
+      if (market) localStorage.setItem(MARKET_KEY, market);
+      if (city) localStorage.setItem(CITY_KEY, city);
+      if (country) localStorage.setItem(COUNTRY_KEY, country);
+      window.dispatchEvent(new CustomEvent('happyhr:market', {detail:{market,city,country,source:source||'manual'}}));
+      if (window.gtag) {
+        gtag('event','market_selected',{
+          selected_market: market || '',
+          selected_city: city || market || '',
+          selected_country: country || '',
+          selection_source: source || 'manual'
+        });
+      }
+    } catch(e){}
+  };
+
+  window.happyHrGetSavedMarket = function(){
+    try { return localStorage.getItem(MARKET_KEY); } catch(e){ return null; }
+  };
+
+  window.happyHrGuessMarket = async function(){
+    const saved = window.happyHrGetSavedMarket();
+    if (saved) return {market:saved, source:'saved'};
+
+    // Use Vercel's geolocation headers through our lightweight serverless endpoint.
+    try {
+      const r = await fetch('/api/geo', {cache:'no-store'});
+      if (!r.ok) throw new Error('geo unavailable');
+      const g = await r.json();
+
+      let guess = '';
+      const citySlug = slugify(g.city);
+      const regionSlug = slugify(g.region);
+      const country = g.country || '';
+
+      const aliases = {
+        'new-york-city':'new-york',
+        'washington':'washington-dc',
+        'honolulu':'honolulu',
+        'kahului':'maui',
+        'kihei':'maui',
+        'lahaina':'maui',
+        'wailuku':'maui',
+        'lihue':'kauai',
+        'kapaa':'kauai',
+        'koloa':'kauai',
+        'kailua-kona':'hawaii-island',
+        'hilo':'hawaii-island'
+      };
+
+      if (supported[citySlug]) guess = citySlug;
+      else if (aliases[citySlug]) guess = aliases[citySlug];
+      else if (country === 'US' && regionSlug === 'hawaii') guess = 'honolulu';
+
+      if (guess) {
+        window.happyHrSetMarket(guess, g.city || supported[guess], country, 'ip_guess');
+        return {market:guess, source:'ip_guess', geo:g};
+      }
+    } catch(e){}
+
+    return {market:null, source:'none'};
+  };
+})();
+</script>
+
+<script src="app.js"></script></body></html>

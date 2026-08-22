@@ -129,3 +129,154 @@ byId('mapViewBtn').onclick=()=>setView('map');byId('listViewBtn').onclick=()=>se
 const modal=byId('cityModal');function closeModal(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true')}byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=closeModal;modal.querySelector('.modal-backdrop').onclick=closeModal;modal.querySelectorAll('[data-island]').forEach(b=>b.addEventListener('click',()=>setIsland(b.dataset.island)));
 const params=new URLSearchParams(location.search);if(islandConfigs[params.get('island')])state.island=params.get('island');const requestedArea=params.get('area');updateContextText();if(requestedArea&&currentRegions().some(r=>r.key===requestedArea))state.neighborhood=requestedArea;
 sync();renderCoverage();render();initMap();loadVenuesFromSupabase();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);
+
+
+// ===== HappyHr national market layer =====
+(function(){
+  const supported = window.HAPPYHR_SUPPORTED_MARKETS || {};
+  const displayNames = supported;
+
+  const marketSelectCandidates = [
+    '#islandSelect',
+    '#island-select',
+    '[data-role="island-select"]',
+    'select[name="island"]',
+    'select[name="market"]'
+  ];
+
+  function q(sel){ try { return document.querySelector(sel); } catch(e){ return null; } }
+
+  function getMarketSelect(){
+    for (const s of marketSelectCandidates) {
+      const el = q(s);
+      if (el) return el;
+    }
+    // fallback: choose first select whose options mention Oahu/Maui
+    for (const el of document.querySelectorAll('select')) {
+      const txt = [...el.options].map(o=>o.textContent).join(' ');
+      if (/O.?ahu|Maui|Kauai|Hawai/i.test(txt)) return el;
+    }
+    return null;
+  }
+
+  function ensureNationalOptions(select){
+    if (!select) return;
+    const existing = new Set([...select.options].map(o=>(o.value||'').toLowerCase()));
+    const groups = [
+      ['Hawaiʻi', [
+        ['honolulu','Honolulu / Oʻahu'],
+        ['maui','Maui'],
+        ['kauai','Kauaʻi'],
+        ['hawaii-island','Hawaiʻi Island']
+      ]],
+      ['Mainland U.S.', [
+        ['los-angeles','Los Angeles'],
+        ['san-diego','San Diego'],
+        ['san-francisco','San Francisco'],
+        ['seattle','Seattle'],
+        ['portland','Portland'],
+        ['las-vegas','Las Vegas'],
+        ['phoenix','Phoenix'],
+        ['denver','Denver'],
+        ['austin','Austin'],
+        ['dallas','Dallas'],
+        ['houston','Houston'],
+        ['san-antonio','San Antonio'],
+        ['chicago','Chicago'],
+        ['nashville','Nashville'],
+        ['new-york','New York'],
+        ['boston','Boston'],
+        ['washington-dc','Washington DC'],
+        ['philadelphia','Philadelphia'],
+        ['atlanta','Atlanta'],
+        ['miami','Miami'],
+        ['tampa','Tampa'],
+        ['new-orleans','New Orleans']
+      ]]
+    ];
+    for (const [label, opts] of groups){
+      const og = document.createElement('optgroup');
+      og.label = label;
+      let used = false;
+      for (const [val, text] of opts){
+        if (!existing.has(val.toLowerCase())){
+          const o = document.createElement('option');
+          o.value = val;
+          o.textContent = text;
+          og.appendChild(o);
+          used = true;
+        }
+      }
+      if (used) select.appendChild(og);
+    }
+  }
+
+  function applyMarket(market, source){
+    if (!market) return;
+    const select = getMarketSelect();
+    if (select) {
+      const option = [...select.options].find(o => (o.value||'').toLowerCase() === market.toLowerCase());
+      if (option) {
+        select.value = option.value;
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    }
+    if (window.happyHrSetMarket) window.happyHrSetMarket(market, displayNames[market] || market, 'US', source || 'manual');
+  }
+
+  function setupBanner(guess){
+    const banner = q('#city-detect-banner');
+    const text = q('#city-detect-text');
+    const use = q('#city-detect-use');
+    const change = q('#city-detect-change');
+    if (!banner || !guess || !guess.market) return;
+    const name = displayNames[guess.market] || guess.market;
+    text.textContent = `We think you're near ${name}. Show happy hours there?`;
+    banner.hidden = false;
+    use.onclick = () => {
+      banner.hidden = true;
+      applyMarket(guess.market, 'ip_confirmed');
+    };
+    change.onclick = () => {
+      banner.hidden = true;
+      const select = getMarketSelect();
+      if (select) { select.focus(); select.click(); }
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', async function(){
+    const select = getMarketSelect();
+    ensureNationalOptions(select);
+
+    if (select) {
+      select.addEventListener('change', () => {
+        const val = select.value;
+        if (val && supported[val]) {
+          if (window.happyHrSetMarket) window.happyHrSetMarket(val, supported[val], 'US', 'manual');
+          if (history && history.replaceState) {
+            const u = new URL(location.href);
+            u.searchParams.set('market', val);
+            history.replaceState({},'',u);
+          }
+        }
+      });
+    }
+
+    const urlMarket = new URL(location.href).searchParams.get('market');
+    if (urlMarket && supported[urlMarket]) {
+      applyMarket(urlMarket, 'url');
+      return;
+    }
+
+    const saved = window.happyHrGetSavedMarket && window.happyHrGetSavedMarket();
+    if (saved && supported[saved]) {
+      applyMarket(saved, 'saved');
+      return;
+    }
+
+    if (window.happyHrGuessMarket) {
+      const guess = await window.happyHrGuessMarket();
+      if (guess && guess.market) setupBanner(guess);
+    }
+  });
+})();

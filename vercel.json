@@ -104,22 +104,6 @@
     {
       "source": "/new-orleans",
       "destination": "/?market=new-orleans"
-    },
-    {
-      "source": "/oahu-happy-hour",
-      "destination": "/?island=Oahu"
-    },
-    {
-      "source": "/maui-happy-hour",
-      "destination": "/?island=Maui"
-    },
-    {
-      "source": "/kauai-happy-hour",
-      "destination": "/?island=Kauai"
-    },
-    {
-      "source": "/hawaii-island-happy-hour",
-      "destination": "/?island=Hawaii"
     }
   ]
 }

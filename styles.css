@@ -390,3 +390,29 @@
 .contact-copy h2{font-size:clamp(30px,4vw,48px);margin:8px 0 16px;color:#112c3d}
 .contact-copy p{font-size:16px;line-height:1.65;color:#536974;max-width:580px}
 @media(max-width:820px){.contact-wrap{grid-template-columns:1fr;gap:28px}}
+
+
+/* Robust map interaction v2:
+   venue marker DOM never receives pointer events. The Leaflet map performs
+   nearest-pin hit testing, preventing overlapping/async marker DOM from
+   producing dead pins. */
+.leaflet-marker-icon.happyhr-marker-icon,
+.leaflet-marker-icon.happyhr-marker-icon *,
+.happyhr-pin-link,
+.happyhr-pin-link *,
+.happyhr-pin-button,
+.happyhr-pin-button *{
+  pointer-events:none!important;
+}
+.leaflet-marker-icon.happyhr-marker-icon{
+  cursor:inherit!important;
+}
+.leaflet-marker-icon.happyhr-marker-icon.happyhr-nearest-pin .adult-map-pin{
+  transform:rotate(-45deg) scale(1.13)!important;
+  filter:brightness(1.08);
+  box-shadow:0 7px 18px rgba(0,0,0,.34);
+}
+.leaflet-marker-icon.happyhr-marker-icon.happyhr-nearest-pin .checking-hh-pin{
+  transform:rotate(-45deg) scale(1.12)!important;
+  opacity:.95;
+}

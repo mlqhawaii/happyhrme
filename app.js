@@ -333,29 +333,30 @@ async function geocodeVenue(v){
     return [lat,lng];
   }catch(e){return null}
 }
+function nearestVenueMarkerFromContainerPoint(point,maxDistance=28){
+  if(!hhMap||!point)return null;
+  let best=null;
+  let bestDistance=maxDistance;
+  for(const entry of mapPinRegistry.values()){
+    const marker=entry?.marker;
+    if(!marker||!hhMap.hasLayer(marker))continue;
+    const latlng=marker.getLatLng?.();
+    if(!latlng)continue;
+    const p=hhMap.latLngToContainerPoint(latlng);
+    const dx=p.x-point.x,dy=p.y-point.y;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(d<=bestDistance){
+      bestDistance=d;
+      best=entry;
+    }
+  }
+  return best;
+}
+
 function installMapPinDelegation(){
-  const mapEl=byId('map');
-  if(!mapEl||mapEl.dataset.happyhrPinDelegation==='1')return;
-  mapEl.dataset.happyhrPinDelegation='1';
-
-  // One capture-phase handler owns ALL map-pin interaction. This works for
-  // immediate markers, cached markers and markers added later after geocoding.
-  mapEl.addEventListener('click',(e)=>{
-    const btn=e.target.closest?.('.happyhr-pin-link');
-    if(!btn||!mapEl.contains(btn))return;
-    const entry=mapPinRegistry.get(btn.dataset.pinId);
-    if(!entry)return;
-    e.preventDefault();
-    e.stopPropagation();
-    try{history.replaceState(null,'',btn.getAttribute('href'))}catch(err){}
-    activateVenueMarker(entry.marker,entry.venue);
-  },true);
-
-  // Prevent Leaflet from interpreting a pin press as the start of a map drag.
-  mapEl.addEventListener('pointerdown',(e)=>{
-    const btn=e.target.closest?.('.happyhr-pin-link');
-    if(btn&&mapEl.contains(btn))e.stopPropagation();
-  },true);
+  // Interaction is installed on the Leaflet map itself in initMap().
+  // Venue marker DOM is deliberately non-interactive so tiles/markers cannot
+  // steal clicks from one another.
 }
 function activateVenueMarker(marker,v){
   // Keep every map marker behavior identical regardless of how its coordinates were obtained.
@@ -461,8 +462,8 @@ function createVenueMarker(v,coords,status){
     riseOnHover:status==='verified',
     zIndexOffset:p.z,
     opacity:p.opacity,
-    interactive:true,
-    keyboard:true,
+    interactive:false,
+    keyboard:false,
     bubblingMouseEvents:false
   }).bindPopup(p.popup,{maxWidth:260});
   wireVenueMarker(marker,v);
@@ -496,7 +497,52 @@ async function renderMapMarkers(){
 }
 
 function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}
-function initMap(){if(!window.L||hhMap)return;installMapPinDelegation();hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);fitCurrentIsland();renderMapMarkers();byId('recenterMap')?.addEventListener('click',fitCurrentIsland);setTimeout(()=>hhMap.invalidateSize(),150);window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100))}
+function initMap(){
+  if(!window.L||hhMap)return;
+  hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    maxZoom:19,
+    attribution:'Tiles © Esri'
+  }).addTo(hhMap);
+
+  // One deterministic interaction layer for every venue pin.
+  hhMap.on('click',(e)=>{
+    const point=hhMap.latLngToContainerPoint(e.latlng);
+    const entry=nearestVenueMarkerFromContainerPoint(point,30);
+    if(!entry)return;
+    try{history.replaceState(null,'',venuePinHref(entry.venue))}catch(err){}
+    activateVenueMarker(entry.marker,entry.venue);
+  });
+
+  // Give users a pointer cursor whenever they are actually within clicking
+  // distance of a venue pin, regardless of the marker DOM underneath.
+  hhMap.on('mousemove',(e)=>{
+    const point=hhMap.latLngToContainerPoint(e.latlng);
+    const entry=nearestVenueMarkerFromContainerPoint(point,30);
+    const container=hhMap.getContainer();
+    container.style.cursor=entry?'pointer':'grab';
+
+    // Lightweight visual hover: only one nearest pin is emphasized.
+    for(const item of mapPinRegistry.values()){
+      const el=item.marker?.getElement?.();
+      if(el)el.classList.toggle('happyhr-nearest-pin',Boolean(entry&&item===entry));
+    }
+  });
+  hhMap.on('mouseout',()=>{
+    const container=hhMap.getContainer();
+    container.style.cursor='grab';
+    for(const item of mapPinRegistry.values()){
+      const el=item.marker?.getElement?.();
+      if(el)el.classList.remove('happyhr-nearest-pin');
+    }
+  });
+
+  fitCurrentIsland();
+  renderMapMarkers();
+  byId('recenterMap')?.addEventListener('click',fitCurrentIsland);
+  setTimeout(()=>hhMap.invalidateSize(),150);
+  window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100));
+}
 function renderCoverage(){const strip=byId('coverageStrip');const regs=currentRegions().filter(r=>r.key!=='__market__');strip.innerHTML=regs.map(r=>{const count=completeVenuesForMarket().filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=currentRegions().find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:b.textContent})}))}
 function refreshAll(){updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland()}
 ['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));

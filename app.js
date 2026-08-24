@@ -224,8 +224,19 @@ function setIsland(island){if(!islandConfigs[island])return;state.island=island;
 
 let hhMap,regionMarkers=[];
 function currentRegions(){return islandConfigs[state.island].regions}
-function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];currentRegions().filter(r=>r.key!=='__market__'||completeVenuesForMarket().length).forEach(r=>{const count=completeVenuesForMarket().filter(v=>r.key==='__market__'||v.neighborhood===r.key).length;if(!count)return;const icon=L.divIcon({className:'region-marker',html:`<div class="region-pin"><i>●</i><span>${r.label}<small>${count} verified spot${count===1?'':'s'}</small></span></div>`,iconSize:null,iconAnchor:[15,15]});const marker=L.marker([r.lat,r.long],{icon}).addTo(hhMap);marker.on('click',()=>{state.neighborhood=r.key;sync();render();renderCoverage();track('map_region_click',{island:state.island,area:r.label})});regionMarkers.push(marker)});
-  // Future-safe support: only an explicit verified_no_happy_hour record gets a sad marker.
+function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];
+  // One pin per VERIFIED happy-hour venue. The previous city/area centroid marker was
+  // visually tidy but not useful for finding where a restaurant actually is.
+  completeVenuesForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{
+    const s=statusFor(v);
+    const icon=L.divIcon({className:'venue-map-marker',html:`<div class="venue-map-pin ${s.key}" title="${v.name.replace(/"/g,'&quot;')}"><span></span></div>`,iconSize:[24,32],iconAnchor:[12,31],popupAnchor:[0,-28]});
+    const popup=`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a></div>`;
+    const marker=L.marker([v.latitude,v.longitude],{icon,riseOnHover:true}).addTo(hhMap).bindPopup(popup,{maxWidth:260});
+    marker.on('click',()=>track('map_venue_click',{market:state.island,venue:v.name,area:areaLabel(v)}));
+    regionMarkers.push(marker);
+  });
+  // Only an explicitly verified_no_happy_hour record gets a sad marker. Unverified
+  // venues remain off the map so absence never implies the venue has no happy hour.
   verifiedNoHappyHourForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour">☹</div>`,iconSize:[30,30],iconAnchor:[15,15]});const marker=L.marker([v.latitude,v.longitude],{icon}).addTo(hhMap).bindPopup(`<strong>${v.name}</strong><br>Verified: no current happy hour`);regionMarkers.push(marker)});
 }
 function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}

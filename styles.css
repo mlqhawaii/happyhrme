@@ -246,3 +246,69 @@
 .happyhr-marker-hitbox .adult-map-pin{
   pointer-events:none!important;
 }
+
+
+/* Pin click overlap correction: large 56px invisible boxes caused neighboring
+   markers to steal pointer events. This box closely follows the visible pin. */
+.leaflet-marker-icon.happyhr-marker-icon{
+  width:42px!important;
+  height:46px!important;
+  overflow:visible!important;
+}
+.happyhr-marker-hitbox{
+  width:42px!important;
+  height:46px!important;
+  display:grid!important;
+  place-items:center!important;
+}
+
+/* Larger, more confident adult smile. */
+.adult-pin-face{
+  width:28px!important;
+  height:28px!important;
+}
+.adult-pin-face i,
+.adult-pin-face b{
+  width:3.5px!important;
+  height:3.5px!important;
+  top:7px!important;
+}
+.adult-pin-face i{left:6px!important}
+.adult-pin-face b{right:6px!important}
+.adult-pin-face em{
+  width:14px!important;
+  height:7px!important;
+  margin-left:-7px!important;
+  bottom:5px!important;
+  border-width:2.5px!important;
+  border-top:0!important;
+}
+.adult-pin-sad em{
+  bottom:3px!important;
+  border-bottom:0!important;
+  border-top:2.5px solid #102f3b!important;
+}
+
+/* Venue popup ride action. */
+.popup-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.popup-actions>a{
+  display:inline-flex;
+  align-items:center;
+  text-decoration:none;
+  font-size:12px;
+  font-weight:800;
+}
+.ride-link{
+  background:#111;
+  color:#fff!important;
+  padding:8px 10px;
+  border-radius:8px;
+  letter-spacing:.1px;
+}
+.ride-link:hover{filter:brightness(1.15)}

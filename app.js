@@ -321,6 +321,14 @@ function wireVenueMarker(marker,v){
 
   // Leaflet event path (desktop + touch).
   marker.on('click',activate);
+  marker.on('popupopen',()=>{
+    const popupEl=marker.getPopup()?.getElement?.();
+    const ride=popupEl?.querySelector('.ride-link');
+    if(ride && ride.dataset.happyhrTracked!=='1'){
+      ride.dataset.happyhrTracked='1';
+      ride.addEventListener('click',()=>track('ride_uber_click',{venue:v.name,market:state.island,area:areaLabel(v)}));
+    }
+  });
 
   const bindDom=()=>{
     const el=marker.getElement();
@@ -354,13 +362,37 @@ function wireVenueMarker(marker,v){
   requestAnimationFrame(bindDom);
   return marker;
 }
-function markerPresentation(v,status){
+
+// Ride-link configuration.
+// Add an Uber developer/affiliate client ID here later to enable destination-prefilled
+// universal links with attribution. Until then the button still opens Uber.
+const UBER_CLIENT_ID="";
+
+function uberRideUrl(v,coords){
+  const [lat,lng]=coords||[];
+  if(UBER_CLIENT_ID && Number.isFinite(lat) && Number.isFinite(lng)){
+    const drop={
+      latitude:lat,
+      longitude:lng,
+      addressLine1:String(v.name||"Destination"),
+      addressLine2:String(v.address||areaLabel(v)||"")
+    };
+    return `https://m.uber.com/looking?client_id=${encodeURIComponent(UBER_CLIENT_ID)}&pickup=${encodeURIComponent("my_location")}&drop[0]=${encodeURIComponent(JSON.stringify(drop))}`;
+  }
+  return "https://m.uber.com/";
+}
+function rideButtonHtml(v,coords){
+  const url=uberRideUrl(v,coords);
+  return `<a class="ride-link ride-uber" href="${url}" target="_blank" rel="noopener" data-ride-venue="${String(v.name||"").replace(/"/g,'&quot;')}">Get a ride ↗</a>`;
+}
+
+function markerPresentation(v,status,coords){
   if(status==='verified'){
     const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
     return {
       className:'happyhr-marker-icon',
       visual:`<div class="happyhr-marker-hitbox"><div class="adult-map-pin verified-hh" title="Verified happy hour: ${String(v.name||'').replace(/"/g,'&quot;')}"><span class="adult-pin-face adult-pin-happy" aria-hidden="true"><i></i><b></b><em></em></span></div></div>`,
-      popup:`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}${sourceLink}</div>`,
+      popup:`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}</div></div>`,
       z:200,
       opacity:1
     };
@@ -369,7 +401,7 @@ function markerPresentation(v,status){
     return {
       className:'happyhr-marker-icon',
       visual:`<div class="happyhr-marker-hitbox"><div class="adult-map-pin no-hh-adult" title="Verified: no current happy hour"><span class="adult-pin-face adult-pin-sad" aria-hidden="true"><i></i><b></b><em></em></span></div></div>`,
-      popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,
+      popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}</div></div>`,
       z:-50,
       opacity:1
     };
@@ -377,22 +409,22 @@ function markerPresentation(v,status){
   return {
     className:'happyhr-marker-icon checking-marker',
     visual:`<div class="happyhr-marker-hitbox"><div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div></div>`,
-    popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,
+    popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}</div></div>`,
     z:-300,
     opacity:.48
   };
 }
 function createVenueMarker(v,coords,status){
   const [lat,lng]=coords;
-  const p=markerPresentation(v,status);
-  // 56x56 is intentionally larger than the visible pin. The user can click
-  // anywhere on the pin they can see, including the rotated teardrop corners.
+  const p=markerPresentation(v,status,coords);
+  // Keep the interactive box close to the visible marker. Oversized hitboxes
+  // overlap neighboring pins and can steal clicks from one another.
   const icon=L.divIcon({
     className:p.className,
     html:p.visual,
-    iconSize:[56,56],
-    iconAnchor:[28,48],
-    popupAnchor:[0,-38]
+    iconSize:[42,46],
+    iconAnchor:[21,43],
+    popupAnchor:[0,-36]
   });
   const marker=L.marker([lat,lng],{
     icon,

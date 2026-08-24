@@ -246,23 +246,56 @@ function setIsland(island){if(!islandConfigs[island])return;state.island=island;
 
 let hhMap,regionMarkers=[];
 function currentRegions(){return islandConfigs[state.island].regions}
-function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];
-  // One pin per VERIFIED happy-hour venue. The previous city/area centroid marker was
-  // visually tidy but not useful for finding where a restaurant actually is.
-  completeVenuesForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{
-    const s=statusFor(v);
-    const icon=L.divIcon({className:'venue-map-marker',html:`<div class="venue-map-pin verified-hh" title="Verified happy hour: ${v.name.replace(/"/g,'&quot;')}"><span aria-hidden="true">🙂</span></div>`,iconSize:[34,38],iconAnchor:[17,36],popupAnchor:[0,-31]});
-    const popup=`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a></div>`;
-    const marker=L.marker([v.latitude,v.longitude],{icon,riseOnHover:true}).addTo(hhMap).bindPopup(popup,{maxWidth:260});
-    marker.on('click',()=>track('map_venue_click',{market:state.island,venue:v.name,area:areaLabel(v)}));
-    regionMarkers.push(marker);
-  });
-  // A sad marker is reserved for an explicitly verified no-happy-hour result.
-  verifiedNoHappyHourForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div>`,iconSize:[34,38],iconAnchor:[17,36],popupAnchor:[0,-31]});const marker=L.marker([v.latitude,v.longitude],{icon}).addTo(hhMap).bindPopup(`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,{maxWidth:240});regionMarkers.push(marker)});
-  // Known venues that are still being checked appear as neutral question-mark pins.
-  // This makes coverage visible without falsely claiming they do not offer happy hour.
-  pendingVenuesForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'checking-hh-marker',html:`<div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div>`,iconSize:[22,24],iconAnchor:[11,22],popupAnchor:[0,-19]});const marker=L.marker([v.latitude,v.longitude],{icon,opacity:.62,zIndexOffset:-300}).addTo(hhMap).bindPopup(`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,{maxWidth:250});regionMarkers.push(marker)});
+function markerCacheKey(v){return `happyhr:geo:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+function cachedVenueCoords(v){
+  if(Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)) return [v.latitude,v.longitude];
+  try{const raw=localStorage.getItem(markerCacheKey(v));if(!raw)return null;const x=JSON.parse(raw);return Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)?[x.lat,x.lng]:null}catch(e){return null}
 }
+async function geocodeVenue(v){
+  const direct=cachedVenueCoords(v);if(direct)return direct;
+  const cfg=islandConfigs[state.island]||{};
+  const marketLabel=cfg.label||state.island;
+  const query=(v.address&&v.address.trim())?v.address:`${v.name}, ${areaLabel(v)}, ${marketLabel}, ${MARKET_STATE_CODES[state.island]||''}, USA`;
+  try{
+    const url=`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=1&outFields=Match_addr,Addr_type&SingleLine=${encodeURIComponent(query)}`;
+    const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok)return null;
+    const j=await r.json();const c=j?.candidates?.[0];if(!c?.location)return null;
+    const lat=Number(c.location.y),lng=Number(c.location.x);if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;
+    // Reject a geocode that lands outside the selected market's map bounds.
+    if(Array.isArray(cfg.bounds)){const [[s,w],[n,e]]=cfg.bounds;if(lat<s||lat>n||lng<w||lng>e)return null}
+    try{localStorage.setItem(markerCacheKey(v),JSON.stringify({lat,lng,at:Date.now()}))}catch(e){}
+    return [lat,lng];
+  }catch(e){return null}
+}
+function addVerifiedMarker(v,coords){
+  const [lat,lng]=coords;
+  const icon=L.divIcon({className:'venue-map-marker',html:`<div class="venue-map-pin verified-hh" title="Verified happy hour: ${v.name.replace(/"/g,'&quot;')}"><span aria-hidden="true">🙂</span></div>`,iconSize:[34,38],iconAnchor:[17,36],popupAnchor:[0,-31]});
+  const popup=`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a></div>`;
+  const marker=L.marker([lat,lng],{icon,riseOnHover:true,zIndexOffset:200}).addTo(hhMap).bindPopup(popup,{maxWidth:260});
+  marker.on('click',()=>track('map_venue_click',{market:state.island,venue:v.name,area:areaLabel(v)}));regionMarkers.push(marker);
+}
+function addNoHappyMarker(v,coords){const [lat,lng]=coords;const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div>`,iconSize:[30,34],iconAnchor:[15,32],popupAnchor:[0,-27]});const marker=L.marker([lat,lng],{icon,zIndexOffset:-50}).addTo(hhMap).bindPopup(`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,{maxWidth:240});regionMarkers.push(marker)}
+function addCheckingMarker(v,coords){const [lat,lng]=coords;const icon=L.divIcon({className:'checking-hh-marker',html:`<div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div>`,iconSize:[18,20],iconAnchor:[9,18],popupAnchor:[0,-15]});const marker=L.marker([lat,lng],{icon,opacity:.48,zIndexOffset:-300}).addTo(hhMap).bindPopup(`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,{maxWidth:250});regionMarkers.push(marker)}
+async function renderMapMarkers(){
+  if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];
+  const renderToken=Symbol('mapRender');renderMapMarkers.token=renderToken;
+  const groups=[
+    [completeVenuesForMarket(),addVerifiedMarker],
+    [verifiedNoHappyHourForMarket(),addNoHappyMarker],
+    [pendingVenuesForMarket(),addCheckingMarker]
+  ];
+  // Draw already-known/cached coordinates instantly.
+  const missing=[];
+  groups.forEach(([list,adder])=>list.forEach(v=>{const c=cachedVenueCoords(v);if(c)adder(v,c);else missing.push([v,adder])}));
+  // Older Hawaiʻi records often predate stored coordinates. Geocode those records
+  // from their address/name and cache the result, so subsequent map loads are instant.
+  for(const [v,adder] of missing){
+    if(renderMapMarkers.token!==renderToken)return;
+    const c=await geocodeVenue(v);if(c&&renderMapMarkers.token===renderToken)adder(v,c);
+    await new Promise(r=>setTimeout(r,80));
+  }
+}
+
 function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}
 function initMap(){if(!window.L||hhMap)return;hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);fitCurrentIsland();renderMapMarkers();byId('recenterMap')?.addEventListener('click',fitCurrentIsland);setTimeout(()=>hhMap.invalidateSize(),150);window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100))}
 function renderCoverage(){const strip=byId('coverageStrip');const regs=currentRegions().filter(r=>r.key!=='__market__');strip.innerHTML=regs.map(r=>{const count=completeVenuesForMarket().filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=currentRegions().find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:b.textContent})}))}

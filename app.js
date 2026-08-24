@@ -288,7 +288,31 @@ function currentRegions(){return islandConfigs[state.island].regions}
 function markerCacheKey(v){return `happyhr:geo:v3:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 function cachedVenueCoords(v){
   if(Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)) return [v.latitude,v.longitude];
-  try{const raw=localStorage.getItem(markerCacheKey(v));if(!raw)return null;const x=JSON.parse(raw);return Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)?[x.lat,x.lng]:null}catch(e){return null}
+  // Reuse coordinates the site already resolved successfully in earlier builds.
+  // We stopped making NEW weak name/neighborhood guesses, but throwing away the
+  // old successful map cache made older markets such as Oahu lose most pins.
+  const slug=String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  const keys=[
+    markerCacheKey(v),
+    `happyhr:geo:v2:${slug}:${state.island}`,
+    `happyhr:geo:${slug}:${state.island}`
+  ];
+  const cfg=islandConfigs[state.island]||{};
+  for(const key of keys){
+    try{
+      const raw=localStorage.getItem(key);if(!raw)continue;
+      const x=JSON.parse(raw),lat=Number(x?.lat),lng=Number(x?.lng);
+      if(!Number.isFinite(lat)||!Number.isFinite(lng))continue;
+      if(Array.isArray(cfg.bounds)){
+        const [[south,west],[north,east]]=cfg.bounds;
+        if(lat<south||lat>north||lng<west||lng>east)continue;
+      }
+      // Promote a valid legacy result into the current cache version.
+      try{localStorage.setItem(markerCacheKey(v),JSON.stringify({lat,lng,at:Date.now(),legacy:true}))}catch(e){}
+      return [lat,lng];
+    }catch(e){}
+  }
+  return null;
 }
 async function geocodeVenue(v){
   const direct=cachedVenueCoords(v);if(direct)return direct;

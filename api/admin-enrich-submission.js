@@ -58,6 +58,58 @@ function extractHappyHour(text){
   const timeMatches=[...evidence.matchAll(/\b(?:1[0-2]|0?[1-9])(?::[0-5]\d)?\s*(?:am|pm)\s*(?:-|–|—|to)\s*(?:1[0-2]|0?[1-9])(?::[0-5]\d)?\s*(?:am|pm)\b/gi)].map(x=>x[0]);
   return {term,evidence,hours:timeMatches[0]||''};
 }
+
+function absolutize(base,href){
+  try{return new URL(href,base).href}catch{return ''}
+}
+function sameOrigin(a,b){
+  try{return new URL(a).origin===new URL(b).origin}catch{return false}
+}
+function candidateInternalLinks(html,baseUrl){
+  if(!html||!baseUrl)return [];
+  const links=[];
+  const re=/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const keywords=/(contact|location|locations|find us|visit|directions|about|reservation|reservations|hours)/i;
+  let m;
+  while((m=re.exec(html))){
+    const href=absolutize(baseUrl,m[1]);
+    const label=stripTags(m[2]);
+    if(!href||!sameOrigin(href,baseUrl))continue;
+    if(keywords.test(`${label} ${href}`))links.push(href);
+  }
+  try{links.push(new URL('/',baseUrl).href)}catch{}
+  return [...new Set(links)].slice(0,6);
+}
+async function fetchHtml(url,timeoutMs=10000){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    const r=await fetch(url,{redirect:'follow',signal:controller.signal,headers:{'User-Agent':'Mozilla/5.0 HappyHr.Me verification bot'}});
+    if(!r.ok)throw new Error(`Source returned ${r.status}`);
+    return {html:(await r.text()).slice(0,1500000),url:r.url||url};
+  }finally{clearTimeout(timer)}
+}
+async function discoverAddressFromSite(startHtml,startUrl){
+  const first=extractStructured(startHtml);
+  if(first.address)return {structured:first,addressSource:startUrl,visited:[startUrl]};
+  const links=candidateInternalLinks(startHtml,startUrl);
+  const visited=[startUrl];
+  for(const link of links){
+    if(visited.includes(link))continue;
+    visited.push(link);
+    try{
+      const page=await fetchHtml(link,8000);
+      const structured=extractStructured(page.html);
+      if(structured.address)return {structured,addressSource:page.url,visited};
+      // Fallback for clearly formatted US street addresses on official contact/location pages.
+      const text=stripTags(page.html);
+      const m=text.match(/\b\d{1,6}\s+[A-Za-z0-9.'’\- ]{2,60}\s+(?:St(?:reet)?|Ave(?:nue)?|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Pl|Place|Ct|Court)\b[^,]{0,30},\s*[A-Za-z .'-]{2,40},\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/i);
+      if(m)return {structured:{address:clean(m[0]),name:'',latitude:null,longitude:null,telephone:'',openingHours:''},addressSource:page.url,visited};
+    }catch{}
+  }
+  return {structured:first,addressSource:'',visited};
+}
+
 async function geocode(address){
   if(!address)return null;
   const u=new URL('https://nominatim.openstreetmap.org/search');
@@ -80,17 +132,21 @@ export default async function handler(req,res){
     const sr=await supabaseAdminFetch(`happy_hour_submissions?id=eq.${id}&select=*`);
     const submissions=await sr.json();const s=submissions?.[0];
     if(!s)return res.status(404).json({error:'Submission not found'});
-    let html='',finalUrl=s.source_url||'',fetchError='';
+    let html='',finalUrl=s.source_url||'',fetchError='',addressSource='';
     if(s.source_url){
       try{
-        const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000);
-        const r=await fetch(s.source_url,{redirect:'follow',signal:controller.signal,headers:{'User-Agent':'Mozilla/5.0 HappyHr.Me verification bot'}});clearTimeout(timer);
-        finalUrl=r.url||s.source_url;
-        if(!r.ok)throw new Error(`Source returned ${r.status}`);
-        html=(await r.text()).slice(0,1500000);
+        const page=await fetchHtml(s.source_url,12000);
+        finalUrl=page.url||s.source_url;
+        html=page.html;
       }catch(e){fetchError=e.message||'Could not fetch source'}
     }
-    const structured=extractStructured(html);
+    let structured=extractStructured(html);
+    if(html && finalUrl && !clean(s.address) && !structured.address){
+      try{
+        const discovered=await discoverAddressFromSite(html,finalUrl);
+        if(discovered.structured?.address){structured={...structured,...discovered.structured};addressSource=discovered.addressSource||''}
+      }catch(e){}
+    }
     const pageText=stripTags(html);
     const hh=extractHappyHour(pageText);
     let address=clean(s.address)||structured.address;
@@ -114,6 +170,7 @@ export default async function handler(req,res){
       opening_hours:structured.openingHours,
       fetch_error:fetchError,
       geocode_source:geoSource,
+      address_source:addressSource,
       confidence:{address:address?'high':'missing',location:(latitude!=null&&longitude!=null)?'high':'missing',happy_hour:(hh.hours||submittedHours)?(hh.hours?'official-source':'submitted'):'missing'}
     });
   }catch(e){res.status(500).json({error:e.message||'Enrichment failed'})}

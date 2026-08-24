@@ -156,7 +156,7 @@ queue.addEventListener('click',async e=>{
           <label style="grid-column:1/-1">Source URL<input data-f="source_url" value="${esc(x.source_url||'')}"></label>
           <label style="grid-column:1/-1">Deal details<textarea data-f="deal_highlights">${esc(x.deal_highlights||'')}</textarea></label>
         </div>
-        <div class="confidence">Address: ${esc(x.confidence?.address)} · Location: ${esc(x.confidence?.location)} · Happy hour: ${esc(x.confidence?.happy_hour)}</div>
+        <div class="confidence">Address: ${esc(x.confidence?.address)} · Location: ${esc(x.confidence?.location)} · Happy hour: ${esc(x.confidence?.happy_hour)}${x.address_source?` · Address found on <a href="${esc(x.address_source)}" target="_blank" rel="noopener">official site ↗</a>`:''}</div>
         ${x.source_evidence?`<div class="evidence"><strong>Official-source evidence:</strong> ${esc(x.source_evidence)}</div>`:''}
         ${x.fetch_error?`<div class="evidence"><strong>Source warning:</strong> ${esc(x.fetch_error)}</div>`:''}
         <div class="actions"><button class="btn" data-publish-enriched>Publish venue</button></div>`;

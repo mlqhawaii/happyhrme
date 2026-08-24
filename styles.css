@@ -129,3 +129,11 @@
   background:rgba(231,248,244,.82);
   transition:background .25s ease,box-shadow .25s ease;
 }
+
+/* All HappyHr map markers are explicitly interactive. */
+.leaflet-marker-icon.venue-map-marker,
+.leaflet-marker-icon.no-hh-marker,
+.leaflet-marker-icon.checking-hh-marker{pointer-events:auto!important;cursor:pointer!important}
+.venue-map-marker:hover .venue-map-pin,
+.no-hh-marker:hover .no-hh-pin,
+.checking-hh-marker:hover .checking-hh-pin{filter:brightness(1.08);}

@@ -11,5 +11,111 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/los-angeles",
+      "destination": "/?market=los-angeles"
+    },
+    {
+      "source": "/new-york",
+      "destination": "/?market=new-york"
+    },
+    {
+      "source": "/san-diego",
+      "destination": "/?market=san-diego"
+    },
+    {
+      "source": "/san-francisco",
+      "destination": "/?market=san-francisco"
+    },
+    {
+      "source": "/las-vegas",
+      "destination": "/?market=las-vegas"
+    },
+    {
+      "source": "/miami",
+      "destination": "/?market=miami"
+    },
+    {
+      "source": "/chicago",
+      "destination": "/?market=chicago"
+    },
+    {
+      "source": "/boston",
+      "destination": "/?market=boston"
+    },
+    {
+      "source": "/austin",
+      "destination": "/?market=austin"
+    },
+    {
+      "source": "/denver",
+      "destination": "/?market=denver"
+    },
+    {
+      "source": "/seattle",
+      "destination": "/?market=seattle"
+    },
+    {
+      "source": "/nashville",
+      "destination": "/?market=nashville"
+    },
+    {
+      "source": "/portland",
+      "destination": "/?market=portland"
+    },
+    {
+      "source": "/phoenix",
+      "destination": "/?market=phoenix"
+    },
+    {
+      "source": "/dallas",
+      "destination": "/?market=dallas"
+    },
+    {
+      "source": "/houston",
+      "destination": "/?market=houston"
+    },
+    {
+      "source": "/san-antonio",
+      "destination": "/?market=san-antonio"
+    },
+    {
+      "source": "/washington-dc",
+      "destination": "/?market=washington-dc"
+    },
+    {
+      "source": "/philadelphia",
+      "destination": "/?market=philadelphia"
+    },
+    {
+      "source": "/atlanta",
+      "destination": "/?market=atlanta"
+    },
+    {
+      "source": "/tampa",
+      "destination": "/?market=tampa"
+    },
+    {
+      "source": "/new-orleans",
+      "destination": "/?market=new-orleans"
+    },
+    {
+      "source": "/oahu-happy-hour",
+      "destination": "/?island=Oahu"
+    },
+    {
+      "source": "/maui-happy-hour",
+      "destination": "/?island=Maui"
+    },
+    {
+      "source": "/kauai-happy-hour",
+      "destination": "/?island=Kauai"
+    },
+    {
+      "source": "/hawaii-island-happy-hour",
+      "destination": "/?island=Hawaii"
+    }
   ]
 }

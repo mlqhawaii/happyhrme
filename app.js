@@ -78,7 +78,8 @@ function rowToVenue(row){return {
   neighborhood:row.neighborhood||row.area||"",area:row.area||row.neighborhood||"",
   address:row.address||"",latitude:row.latitude==null?null:Number(row.latitude),longitude:row.longitude==null?null:Number(row.longitude),
   days:row.days||"Confirm hours",early:row.early_display||"Confirm current hours",late:row.late_display||"—",
-  beer:row.cheapest_beer==null?null:Number(row.cheapest_beer),drinks:row.drink_highlight||"—",food:row.food_highlight||"—",
+  beer:row.cheapest_beer==null?null:Number(row.cheapest_beer),drinks:row.drink_highlight||"—",food:row.food_highlight||"—",dealHighlights:row.deal_highlights||"",
+  verification:row.verification||"",noHappyHour:row.no_happy_hour===true||row.verification==="verified_no_happy_hour",
   tags:Array.isArray(row.tags)?row.tags:[],source:row.source_url||"#",slots:row.schedule&&typeof row.schedule==="object"?row.schedule:{}
 }}
 const MARKET_STATE_CODES={
@@ -164,8 +165,27 @@ function track(name,params={}){try{if(typeof gtag==='function')gtag('event',name
 function marketNow(){const tz=MARKET_TIMEZONES[state.island]||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};let hour=Number(map.hour);if(hour===24)hour=0;return{day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`}}
 function statusFor(v){const n=marketNow(),slots=v.slots[n.day]||[];for(const[s,e]of slots){if(n.hour>=s&&n.hour<e)return{key:'open',label:'Open now'}}const future=slots.find(([s])=>s>n.hour);if(future){let h=Math.floor(future[0]),m=future[0]%1?30:0;return{key:'later',label:`Starts ${h>12?h-12:h}:${m?'30':'00'} ${h>=12?'PM':'AM'}`}}return{key:'closed',label:slots.length?'Done today':'Check hours'}}
 function isLate(v){return v.tags.includes('late')||v.late!=='—'}
+function isPlaceholderText(value){
+  const t=String(value||"").trim().toLowerCase();
+  if(!t||t==="—"||t==="-")return true;
+  return /confirm|check hours|unknown|not available|tbd|coming soon/.test(t);
+}
+function hasUsefulDeal(v){
+  if(Number.isFinite(v.beer))return true;
+  const parts=[v.dealHighlights,v.drinks,v.food].map(x=>String(x||"").trim()).filter(x=>!isPlaceholderText(x));
+  return parts.some(x=>x.length>=5);
+}
+function isCompleteHappyHour(v){
+  if(v.noHappyHour)return false;
+  const hasTime=!isPlaceholderText(v.early)||!isPlaceholderText(v.late);
+  return hasTime&&hasUsefulDeal(v);
+}
+function completeVenuesForMarket(key=state.island){return venues.filter(v=>venueMarketKey(v)===key&&isCompleteHappyHour(v));}
+function pendingCountForMarket(key=state.island){return venues.filter(v=>venueMarketKey(v)===key&&!v.noHappyHour&&!isCompleteHappyHour(v)).length;}
+function verifiedNoHappyHourForMarket(key=state.island){return venues.filter(v=>venueMarketKey(v)===key&&v.noHappyHour);}
 function filtered(){
   let list=venues.filter(v=>{
+    if(!isCompleteHappyHour(v))return false;
     if(venueMarketKey(v)!==state.island)return false;
     const text=(v.name+' '+v.area+' '+v.drinks+' '+v.food+' '+v.tags.join(' ')).toLowerCase();
     if(state.q&&!text.includes(state.q.toLowerCase()))return false;
@@ -194,7 +214,7 @@ function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b
 function cardHTML(v,full=false){const s=statusFor(v);return `<article class="venue-row"><div class="venue-main"><div class="venue-avatar">${initials(v.name)}</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
 function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
 function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')}
-function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?listHTML(list,false):'<div style="padding:30px">No matching happy hours yet. We are expanding this city now.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div style="padding:30px">No matching happy hours yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
+function render(){const list=filtered();const pending=pendingCountForMarket();resultCount.textContent=list.length;const meta=resultCount.parentElement;if(meta){const existing=meta.querySelector('.pending-check');if(existing)existing.remove();if(pending){const span=document.createElement('span');span.className='pending-check';span.textContent=` · ${pending} being checked`;meta.appendChild(span)}}grid.innerHTML=list.length?listHTML(list,false):'<div class="empty-results">No fully verified happy hours match these filters yet. We’re still checking this city.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div class="empty-results">No fully verified happy hours match these filters yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
 function sync(){const sel=byId('islandFilter');if(sel&&[...sel.options].some(o=>o.value===state.island))sel.value=state.island;byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
 function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();fitCurrentIsland();track('filters_cleared',{island:state.island})}
 function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>hhMap.invalidateSize(),80);track('view_change',{view:mode,island:state.island})}
@@ -204,10 +224,13 @@ function setIsland(island){if(!islandConfigs[island])return;state.island=island;
 
 let hhMap,regionMarkers=[];
 function currentRegions(){return islandConfigs[state.island].regions}
-function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];currentRegions().filter(r=>r.key!=='__market__'||venues.some(v=>venueMarketKey(v)===state.island)).forEach(r=>{const count=venues.filter(v=>venueMarketKey(v)===state.island&&(r.key==='__market__'||v.neighborhood===r.key)).length;const icon=L.divIcon({className:'region-marker',html:`<div class="region-pin"><i>●</i><span>${r.label}<small>${count} spot${count===1?'':'s'}</small></span></div>`,iconSize:null,iconAnchor:[15,15]});const marker=L.marker([r.lat,r.long],{icon}).addTo(hhMap);marker.on('click',()=>{state.neighborhood=r.key;sync();render();renderCoverage();track('map_region_click',{island:state.island,area:r.label})});regionMarkers.push(marker)})}
+function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];currentRegions().filter(r=>r.key!=='__market__'||completeVenuesForMarket().length).forEach(r=>{const count=completeVenuesForMarket().filter(v=>r.key==='__market__'||v.neighborhood===r.key).length;if(!count)return;const icon=L.divIcon({className:'region-marker',html:`<div class="region-pin"><i>●</i><span>${r.label}<small>${count} verified spot${count===1?'':'s'}</small></span></div>`,iconSize:null,iconAnchor:[15,15]});const marker=L.marker([r.lat,r.long],{icon}).addTo(hhMap);marker.on('click',()=>{state.neighborhood=r.key;sync();render();renderCoverage();track('map_region_click',{island:state.island,area:r.label})});regionMarkers.push(marker)});
+  // Future-safe support: only an explicit verified_no_happy_hour record gets a sad marker.
+  verifiedNoHappyHourForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour">☹</div>`,iconSize:[30,30],iconAnchor:[15,15]});const marker=L.marker([v.latitude,v.longitude],{icon}).addTo(hhMap).bindPopup(`<strong>${v.name}</strong><br>Verified: no current happy hour`);regionMarkers.push(marker)});
+}
 function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}
 function initMap(){if(!window.L||hhMap)return;hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);fitCurrentIsland();renderMapMarkers();byId('recenterMap')?.addEventListener('click',fitCurrentIsland);setTimeout(()=>hhMap.invalidateSize(),150);window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100))}
-function renderCoverage(){const strip=byId('coverageStrip');const regs=currentRegions().filter(r=>r.key!=='__market__');strip.innerHTML=regs.map(r=>{const count=venues.filter(v=>venueMarketKey(v)===state.island&&v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=currentRegions().find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:b.textContent})}))}
+function renderCoverage(){const strip=byId('coverageStrip');const regs=currentRegions().filter(r=>r.key!=='__market__');strip.innerHTML=regs.map(r=>{const count=completeVenuesForMarket().filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=currentRegions().find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:b.textContent})}))}
 function refreshAll(){updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland()}
 ['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));
 byId('islandFilter').addEventListener('change',e=>setIsland(e.target.value));byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();renderCoverage();const r=currentRegions().find(x=>x.key===state.neighborhood);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:e.target.value})});
@@ -366,5 +389,31 @@ window.addEventListener('happyhr:market',e=>{let m=e.detail?.market;const aliase
       const guess = await window.happyHrGuessMarket();
       if (guess && guess.market) setupBanner(guess);
     }
+  });
+})();
+
+// Community contribution form
+(function(){
+  const form=document.getElementById('contributionForm');
+  if(!form)return;
+  const kind=document.getElementById('contributionType');
+  const status=document.getElementById('contributionStatus');
+  const venue=document.getElementById('contributionVenue');
+  const market=document.getElementById('contributionMarket');
+  function syncContributionMarket(){const cfg=islandConfigs[state.island];if(market&&cfg)market.value=cfg.label||state.island;}
+  syncContributionMarket();
+  window.addEventListener('happyhr:market',syncContributionMarket);
+  document.querySelectorAll('[data-contribution-type]').forEach(btn=>btn.addEventListener('click',()=>{kind.value=btn.dataset.contributionType||'correction';document.getElementById('contribute').scrollIntoView({behavior:'smooth'});venue.focus()}));
+  form.addEventListener('submit',async(e)=>{
+    e.preventDefault();
+    const fd=new FormData(form);
+    if(fd.get('website'))return; // honeypot
+    const payload={submission_type:fd.get('submission_type'),venue_name:fd.get('venue_name'),market:fd.get('market'),area:fd.get('area'),details:fd.get('details'),source_url:fd.get('source_url'),submitter_contact:fd.get('submitter_contact')};
+    status.textContent='Sending…';
+    try{
+      const r=await fetch(`${SUPABASE_URL}/rest/v1/happy_hour_submissions`,{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(payload)});
+      if(!r.ok)throw new Error(`Submission failed (${r.status})`);
+      form.reset();syncContributionMarket();status.textContent='Thank you — we’ll review it before publishing.';track('community_submission',{type:payload.submission_type,market:payload.market});
+    }catch(err){console.warn(err);status.textContent='The submission box is being configured. Please try again shortly.';}
   });
 })();

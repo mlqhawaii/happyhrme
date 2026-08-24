@@ -229,7 +229,7 @@ function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=
   // visually tidy but not useful for finding where a restaurant actually is.
   completeVenuesForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{
     const s=statusFor(v);
-    const icon=L.divIcon({className:'venue-map-marker',html:`<div class="venue-map-pin ${s.key}" title="${v.name.replace(/"/g,'&quot;')}"><span></span></div>`,iconSize:[24,32],iconAnchor:[12,31],popupAnchor:[0,-28]});
+    const icon=L.divIcon({className:'venue-map-marker',html:`<div class="venue-map-pin verified-hh" title="Verified happy hour: ${v.name.replace(/"/g,'&quot;')}"><span aria-hidden="true">🙂</span></div>`,iconSize:[34,38],iconAnchor:[17,36],popupAnchor:[0,-31]});
     const popup=`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a></div>`;
     const marker=L.marker([v.latitude,v.longitude],{icon,riseOnHover:true}).addTo(hhMap).bindPopup(popup,{maxWidth:260});
     marker.on('click',()=>track('map_venue_click',{market:state.island,venue:v.name,area:areaLabel(v)}));
@@ -237,7 +237,7 @@ function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=
   });
   // Only an explicitly verified_no_happy_hour record gets a sad marker. Unverified
   // venues remain off the map so absence never implies the venue has no happy hour.
-  verifiedNoHappyHourForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour">☹</div>`,iconSize:[30,30],iconAnchor:[15,15]});const marker=L.marker([v.latitude,v.longitude],{icon}).addTo(hhMap).bindPopup(`<strong>${v.name}</strong><br>Verified: no current happy hour`);regionMarkers.push(marker)});
+  verifiedNoHappyHourForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div>`,iconSize:[34,38],iconAnchor:[17,36],popupAnchor:[0,-31]});const marker=L.marker([v.latitude,v.longitude],{icon}).addTo(hhMap).bindPopup(`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,{maxWidth:240});regionMarkers.push(marker)});
 }
 function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}
 function initMap(){if(!window.L||hhMap)return;hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);fitCurrentIsland();renderMapMarkers();byId('recenterMap')?.addEventListener('click',fitCurrentIsland);setTimeout(()=>hhMap.invalidateSize(),150);window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100))}

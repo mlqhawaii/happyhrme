@@ -352,3 +352,35 @@
 }
 .checking-pin-button{opacity:.56}
 .checking-pin-button:hover{opacity:.82}
+
+
+/* Real-link map pins: the marker itself is an anchor, so every venue pin has
+   a working navigation fallback even if JavaScript interaction fails. */
+.happyhr-pin-link{
+  width:42px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  margin:0;
+  background:transparent;
+  border:0;
+  text-decoration:none!important;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+  touch-action:manipulation;
+}
+.happyhr-pin-link:focus-visible{
+  outline:3px solid rgba(15,127,121,.48);
+  outline-offset:2px;
+  border-radius:12px;
+}
+.happyhr-pin-link .adult-map-pin,
+.happyhr-pin-link .checking-hh-pin{pointer-events:none!important}
+.happyhr-pin-link:hover .adult-map-pin,
+.happyhr-pin-link:focus-visible .adult-map-pin{
+  transform:rotate(-45deg) scale(1.12);
+  filter:brightness(1.06);
+}
+.checking-pin-link{opacity:.56}
+.checking-pin-link:hover{opacity:.82}

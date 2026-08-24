@@ -113,7 +113,7 @@ function venueBelongsToMarket(v,key){
 }
 async function loadVenuesFromSupabase(){
   const url=`${SUPABASE_URL}/rest/v1/happy_hours?select=*&active=eq.true&order=venue_name.asc`;
-  try{const response=await fetch(url,{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,Accept:"application/json"}});if(!response.ok)throw new Error(`Supabase ${response.status}`);const rows=await response.json();if(!Array.isArray(rows)||!rows.length)throw new Error("No active venues returned");venues=rows.map(rowToVenue).filter(v=>venueBelongsToMarket(v,venueMarketKey(v)));document.documentElement.dataset.dataSource="supabase";refreshAll();}
+  try{const response=await fetch(url,{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,Accept:"application/json"}});if(!response.ok)throw new Error(`Supabase ${response.status}`);const rows=await response.json();if(!Array.isArray(rows)||!rows.length)throw new Error("No active venues returned");venues=rows.map(rowToVenue).filter(v=>venueBelongsToMarket(v,venueMarketKey(v)));try{const selected=new URLSearchParams(location.search).get('venue');if(selected)state.selectedVenueKey=selected.toLowerCase()}catch(e){}document.documentElement.dataset.dataSource="supabase";refreshAll();}
   catch(error){console.warn("Using bundled fallback because Supabase could not be reached.",error);document.documentElement.dataset.dataSource="fallback";refreshAll();}
 }
 
@@ -285,7 +285,7 @@ let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
 let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
-function markerCacheKey(v){return `happyhr:geo:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+function markerCacheKey(v){return `happyhr:geo:v3:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 function cachedVenueCoords(v){
   if(Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)) return [v.latitude,v.longitude];
   try{const raw=localStorage.getItem(markerCacheKey(v));if(!raw)return null;const x=JSON.parse(raw);return Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)?[x.lat,x.lng]:null}catch(e){return null}
@@ -294,7 +294,10 @@ async function geocodeVenue(v){
   const direct=cachedVenueCoords(v);if(direct)return direct;
   const cfg=islandConfigs[state.island]||{};
   const marketLabel=cfg.label||state.island;
-  const query=(v.address&&v.address.trim())?v.address:`${v.name}, ${areaLabel(v)}, ${marketLabel}, ${MARKET_STATE_CODES[state.island]||''}, USA`;
+  // Accuracy first: never invent a map location from only venue name/neighborhood.
+  // If we do not have a real street address, leave the venue off the map until enriched.
+  const query=String(v.address||"").trim();
+  if(!query)return null;
   try{
     const url=`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=1&outFields=Match_addr,Addr_type&SingleLine=${encodeURIComponent(query)}`;
     const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok)return null;
@@ -314,18 +317,19 @@ function installMapPinDelegation(){
   // One capture-phase handler owns ALL map-pin interaction. This works for
   // immediate markers, cached markers and markers added later after geocoding.
   mapEl.addEventListener('click',(e)=>{
-    const btn=e.target.closest?.('.happyhr-pin-button');
+    const btn=e.target.closest?.('.happyhr-pin-link');
     if(!btn||!mapEl.contains(btn))return;
     const entry=mapPinRegistry.get(btn.dataset.pinId);
     if(!entry)return;
     e.preventDefault();
     e.stopPropagation();
+    try{history.replaceState(null,'',btn.getAttribute('href'))}catch(err){}
     activateVenueMarker(entry.marker,entry.venue);
   },true);
 
   // Prevent Leaflet from interpreting a pin press as the start of a map drag.
   mapEl.addEventListener('pointerdown',(e)=>{
-    const btn=e.target.closest?.('.happyhr-pin-button');
+    const btn=e.target.closest?.('.happyhr-pin-link');
     if(btn&&mapEl.contains(btn))e.stopPropagation();
   },true);
 }
@@ -373,12 +377,26 @@ function rideButtonHtml(v,coords){
   return `<a class="ride-link ride-uber" href="${url}" target="_blank" rel="noopener" data-ride-venue="${String(v.name||"").replace(/"/g,'&quot;')}">Get a ride ↗</a>`;
 }
 
+
+function venuePinHref(v){
+  try{
+    const u=new URL(location.href);
+    u.searchParams.set('venue',venueSelectionKey(v));
+    return `${u.pathname}${u.search}${u.hash||''}`;
+  }catch(e){
+    return `#venue-${encodeURIComponent(venueSelectionKey(v))}`;
+  }
+}
+function escapeAttr(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function markerPresentation(v,status,coords,pinId){
   if(status==='verified'){
     const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
     return {
       className:'happyhr-marker-icon',
-      visual:`<button type="button" class="happyhr-pin-button" data-pin-id="${pinId}" aria-label="Show ${String(v.name||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} details"><span class="adult-map-pin verified-hh" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></button>`,
+      visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></a>`,
       popup:`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}</div></div>`,
       z:200,
       opacity:1
@@ -387,7 +405,7 @@ function markerPresentation(v,status,coords,pinId){
   if(status==='none'){
     return {
       className:'happyhr-marker-icon',
-      visual:`<button type="button" class="happyhr-pin-button" data-pin-id="${pinId}" aria-label="Show ${String(v.name||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} details"><span class="adult-map-pin no-hh-adult" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
+      visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></a>`,
       popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}</div></div>`,
       z:-50,
       opacity:1
@@ -395,7 +413,7 @@ function markerPresentation(v,status,coords,pinId){
   }
   return {
     className:'happyhr-marker-icon checking-marker',
-    visual:`<button type="button" class="happyhr-pin-button checking-pin-button" data-pin-id="${pinId}" aria-label="Show ${String(v.name||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} details"><span class="checking-hh-pin" aria-hidden="true"><span>?</span></span></button>`,
+    visual:`<a class="happyhr-pin-link checking-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="checking-hh-pin" aria-hidden="true"><span>?</span></span></a>`,
     popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}</div></div>`,
     z:-300,
     opacity:.48
@@ -628,12 +646,21 @@ window.addEventListener('happyhr:market',e=>{let m=e.detail?.market;const aliase
   function syncContributionMarket(){const cfg=islandConfigs[state.island];if(market&&cfg)market.value=cfg.label||state.island;}
   syncContributionMarket();
   window.addEventListener('happyhr:market',syncContributionMarket);
-  document.querySelectorAll('[data-contribution-type]').forEach(btn=>btn.addEventListener('click',()=>{kind.value=btn.dataset.contributionType||'correction';document.getElementById('contribute').scrollIntoView({behavior:'smooth'});venue.focus()}));
+  const addressInput=form.querySelector('[name="address"]');
+  function syncAddressRequirement(){
+    const isNew=kind.value==='new_venue';
+    if(addressInput){
+      addressInput.required=isNew;
+      addressInput.placeholder=isNew?'123 Example St, Seattle, WA 98101':'Street address (helpful for corrections)';
+    }
+  }
+  syncAddressRequirement();
+  document.querySelectorAll('[data-contribution-type]').forEach(btn=>btn.addEventListener('click',()=>{kind.value=btn.dataset.contributionType||'correction';syncAddressRequirement();document.getElementById('contribute').scrollIntoView({behavior:'smooth'});venue.focus()}));
   form.addEventListener('submit',async(e)=>{
     e.preventDefault();
     const fd=new FormData(form);
     if(fd.get('website'))return; // honeypot
-    const payload={submission_type:fd.get('submission_type'),venue_name:fd.get('venue_name'),market:fd.get('market'),area:fd.get('area'),details:fd.get('details'),source_url:fd.get('source_url'),submitter_contact:fd.get('submitter_contact')};
+    const payload={submission_type:fd.get('submission_type'),venue_name:fd.get('venue_name'),market:fd.get('market'),area:fd.get('area'),address:fd.get('address'),details:fd.get('details'),source_url:fd.get('source_url'),submitter_contact:fd.get('submitter_contact')};
     status.textContent='Sending…';
     try{
       const r=await fetch(`${SUPABASE_URL}/rest/v1/happy_hour_submissions`,{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(payload)});

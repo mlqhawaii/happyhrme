@@ -7,6 +7,7 @@ create table if not exists public.happy_hour_submissions (
   venue_name text not null,
   market text not null,
   area text,
+  address text,
   details text not null,
   source_url text,
   submitter_contact text,

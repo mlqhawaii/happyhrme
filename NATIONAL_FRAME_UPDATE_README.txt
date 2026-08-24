@@ -9,3 +9,9 @@ Changes:
 - Oahu has an additional coordinate boundary guard, preventing mainland/out-of-state rows mislabeled as Honolulu/Oahu from appearing.
 
 The data workflow should also use the accompanying market-validation n8n file so future mismatched Google Places results are sent to review rather than published.
+
+AREA LIST REFINEMENT
+- Removed redundant area divider/header blocks from restaurant results.
+- Results are now one continuous list sorted alphabetically by Area.
+- Existing sort choices are applied within each Area.
+- The Area column remains visible for quick scanning.

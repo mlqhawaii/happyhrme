@@ -164,17 +164,37 @@ function track(name,params={}){try{if(typeof gtag==='function')gtag('event',name
 function marketNow(){const tz=MARKET_TIMEZONES[state.island]||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};let hour=Number(map.hour);if(hour===24)hour=0;return{day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`}}
 function statusFor(v){const n=marketNow(),slots=v.slots[n.day]||[];for(const[s,e]of slots){if(n.hour>=s&&n.hour<e)return{key:'open',label:'Open now'}}const future=slots.find(([s])=>s>n.hour);if(future){let h=Math.floor(future[0]),m=future[0]%1?30:0;return{key:'later',label:`Starts ${h>12?h-12:h}:${m?'30':'00'} ${h>=12?'PM':'AM'}`}}return{key:'closed',label:slots.length?'Done today':'Check hours'}}
 function isLate(v){return v.tags.includes('late')||v.late!=='—'}
-function filtered(){let list=venues.filter(v=>{if(venueMarketKey(v)!==state.island)return false;const text=(v.name+' '+v.area+' '+v.drinks+' '+v.food+' '+v.tags.join(' ')).toLowerCase();if(state.q&&!text.includes(state.q.toLowerCase()))return false;if(state.neighborhood!=='all'&&v.neighborhood!==state.neighborhood)return false;if((state.open||state.time==='open')&&statusFor(v).key!=='open')return false;if(state.time==='late'&&!isLate(v))return false;if(state.price!=='any'&&!(v.beer&&v.beer<=Number(state.price)))return false;return true});if(state.sort==='beer')list.sort((a,b)=>(a.beer??99)-(b.beer??99));if(state.sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name));if(state.sort==='recommended')list.sort((a,b)=>{const sa=statusFor(a).key==='open'?0:1,sb=statusFor(b).key==='open'?0:1;return sa-sb||(a.beer??99)-(b.beer??99)});return list}
+function filtered(){
+  let list=venues.filter(v=>{
+    if(venueMarketKey(v)!==state.island)return false;
+    const text=(v.name+' '+v.area+' '+v.drinks+' '+v.food+' '+v.tags.join(' ')).toLowerCase();
+    if(state.q&&!text.includes(state.q.toLowerCase()))return false;
+    if(state.neighborhood!=='all'&&v.neighborhood!==state.neighborhood)return false;
+    if((state.open||state.time==='open')&&statusFor(v).key!=='open')return false;
+    if(state.time==='late'&&!isLate(v))return false;
+    if(state.price!=='any'&&!(v.beer&&v.beer<=Number(state.price)))return false;
+    return true;
+  });
+
+  // Keep one continuous list, ordered by area first. The selected sort applies
+  // within each area so users can scan neighborhood-by-neighborhood without
+  // redundant section headers.
+  list.sort((a,b)=>{
+    const areaCompare=areaLabel(a).localeCompare(areaLabel(b),undefined,{sensitivity:'base'});
+    if(areaCompare!==0)return areaCompare;
+    if(state.sort==='beer')return (a.beer??99)-(b.beer??99)||a.name.localeCompare(b.name);
+    if(state.sort==='name')return a.name.localeCompare(b.name);
+    const sa=statusFor(a).key==='open'?0:1,sb=statusFor(b).key==='open'?0:1;
+    return sa-sb||(a.beer??99)-(b.beer??99)||a.name.localeCompare(b.name);
+  });
+  return list;
+}
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase()}
 function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b>`);if(v.drinks&&v.drinks!=='—')parts.push(`<span>${v.drinks}</span>`);if(v.food&&v.food!=='—')parts.push(`<span>${v.food}</span>`);return parts.slice(0,2).join('')||''}
 function cardHTML(v,full=false){const s=statusFor(v);return `<article class="venue-row"><div class="venue-main"><div class="venue-avatar">${initials(v.name)}</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
 function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
-function groupedHTML(list,full=false){
-  const groups=new Map();
-  list.forEach(v=>{const area=areaLabel(v);if(!groups.has(area))groups.set(area,[]);groups.get(area).push(v)});
-  return [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([area,items])=>`<section class="area-group"><div class="area-group-head"><div><span class="area-kicker">AREA</span><h3>${area}</h3></div><span class="area-count">${items.length} spot${items.length===1?'':'s'}</span></div>${items.map(v=>cardHTML(v,full)).join('')}</section>`).join('');
-}
-function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?groupedHTML(list,false):'<div style="padding:30px">No matching happy hours yet. We are expanding this city now.</div>';fullGrid.innerHTML=list.length?groupedHTML(list,true):'<div style="padding:30px">No matching happy hours yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
+function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')}
+function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?listHTML(list,false):'<div style="padding:30px">No matching happy hours yet. We are expanding this city now.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div style="padding:30px">No matching happy hours yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
 function sync(){const sel=byId('islandFilter');if(sel&&[...sel.options].some(o=>o.value===state.island))sel.value=state.island;byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
 function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();fitCurrentIsland();track('filters_cleared',{island:state.island})}
 function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>hhMap.invalidateSize(),80);track('view_change',{view:mode,island:state.island})}

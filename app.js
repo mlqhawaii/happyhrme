@@ -354,26 +354,63 @@ function wireVenueMarker(marker,v){
   requestAnimationFrame(bindDom);
   return marker;
 }
-function addVerifiedMarker(v,coords){
-  const [lat,lng]=coords;
-  const icon=L.divIcon({className:'venue-map-marker',html:`<div class="venue-map-pin verified-hh" title="Verified happy hour: ${v.name.replace(/"/g,'&quot;')}"><span aria-hidden="true">🙂</span></div>`,iconSize:[34,38],iconAnchor:[17,36],popupAnchor:[0,-31]});
-  const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
-  const popup=`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}${sourceLink}</div>`;
-  const marker=L.marker([lat,lng],{icon,riseOnHover:true,zIndexOffset:200,interactive:true,keyboard:true,bubblingMouseEvents:false}).bindPopup(popup,{maxWidth:260});
-  wireVenueMarker(marker,v);marker.addTo(hhMap);regionMarkers.push(marker);
+function markerPresentation(v,status){
+  if(status==='verified'){
+    const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
+    return {
+      className:'happyhr-marker-icon',
+      visual:`<div class="happyhr-marker-hitbox"><div class="venue-map-pin verified-hh" title="Verified happy hour: ${String(v.name||'').replace(/"/g,'&quot;')}"><span aria-hidden="true">🙂</span></div></div>`,
+      popup:`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}${sourceLink}</div>`,
+      z:200,
+      opacity:1
+    };
+  }
+  if(status==='none'){
+    return {
+      className:'happyhr-marker-icon',
+      visual:`<div class="happyhr-marker-hitbox"><div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div></div>`,
+      popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,
+      z:-50,
+      opacity:1
+    };
+  }
+  return {
+    className:'happyhr-marker-icon checking-marker',
+    visual:`<div class="happyhr-marker-hitbox"><div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div></div>`,
+    popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,
+    z:-300,
+    opacity:.48
+  };
 }
-function addNoHappyMarker(v,coords){
+function createVenueMarker(v,coords,status){
   const [lat,lng]=coords;
-  const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div>`,iconSize:[30,34],iconAnchor:[15,32],popupAnchor:[0,-27]});
-  const marker=L.marker([lat,lng],{icon,zIndexOffset:-50,interactive:true,keyboard:true,bubblingMouseEvents:false}).bindPopup(`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,{maxWidth:240});
-  wireVenueMarker(marker,v);marker.addTo(hhMap);regionMarkers.push(marker);
+  const p=markerPresentation(v,status);
+  // 56x56 is intentionally larger than the visible pin. The user can click
+  // anywhere on the pin they can see, including the rotated teardrop corners.
+  const icon=L.divIcon({
+    className:p.className,
+    html:p.visual,
+    iconSize:[56,56],
+    iconAnchor:[28,48],
+    popupAnchor:[0,-38]
+  });
+  const marker=L.marker([lat,lng],{
+    icon,
+    riseOnHover:status==='verified',
+    zIndexOffset:p.z,
+    opacity:p.opacity,
+    interactive:true,
+    keyboard:true,
+    bubblingMouseEvents:false
+  }).bindPopup(p.popup,{maxWidth:260});
+  wireVenueMarker(marker,v);
+  marker.addTo(hhMap);
+  regionMarkers.push(marker);
+  return marker;
 }
-function addCheckingMarker(v,coords){
-  const [lat,lng]=coords;
-  const icon=L.divIcon({className:'checking-hh-marker',html:`<div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div>`,iconSize:[18,20],iconAnchor:[9,18],popupAnchor:[0,-15]});
-  const marker=L.marker([lat,lng],{icon,opacity:.48,zIndexOffset:-300,interactive:true,keyboard:true,bubblingMouseEvents:false}).bindPopup(`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,{maxWidth:250});
-  wireVenueMarker(marker,v);marker.addTo(hhMap);regionMarkers.push(marker);
-}
+function addVerifiedMarker(v,coords){return createVenueMarker(v,coords,'verified')}
+function addNoHappyMarker(v,coords){return createVenueMarker(v,coords,'none')}
+function addCheckingMarker(v,coords){return createVenueMarker(v,coords,'checking')}
 async function renderMapMarkers(){
   if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];
   const renderToken=Symbol('mapRender');renderMapMarkers.token=renderToken;

@@ -19,7 +19,7 @@ button{cursor:pointer}.card{background:#fff;border:1px solid var(--line);border-
 .badge{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;padding:5px 8px;border-radius:999px;background:#eef6f5;color:var(--teal)}
 .meta{color:var(--muted);font-size:13px;line-height:1.5}.details{white-space:pre-wrap;line-height:1.55;margin:14px 0;padding:12px;background:#f8fbfa;border-radius:10px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field strong{display:block;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.field a{color:var(--teal)}
-.notes{width:100%;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.notes{width:100%;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.enrich-box{display:none;margin-top:14px;padding:14px;border:1px solid #cfe0dc;background:#f7fbfa;border-radius:12px}.enrich-box.open{display:block}.enrich-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.enrich-box label{display:grid;gap:5px;font-size:11px;font-weight:800;text-transform:uppercase;color:var(--muted)}.enrich-box input,.enrich-box textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);text-transform:none;font-weight:500}.evidence{font-size:12px;line-height:1.45;color:var(--muted);background:#fff;padding:9px;border-radius:8px;margin-top:9px}.confidence{font-size:11px;font-weight:800;color:var(--teal);margin-top:7px}
 .empty{text-align:center;padding:50px;color:var(--muted)}#adminView[hidden],#loginView[hidden]{display:none!important}
 @media(max-width:700px){.grid{grid-template-columns:1fr}.item-head,.top{align-items:flex-start;flex-direction:column}}
 </style>
@@ -123,16 +123,54 @@ async function loadQueue(){
       <div class="details">${esc(row.details)}</div>
       <textarea class="notes" placeholder="Private admin notes…">${esc(row.admin_notes||'')}</textarea>
       <div class="actions">
+        ${row.submission_type!=='contact'?`<button class="btn" data-enrich>Verify & enrich</button>`:''}
         <button class="btn secondary" data-status="reviewed">Approve / reviewed</button>
         <button class="btn" data-status="applied">Mark applied</button>
         <button class="btn danger" data-status="rejected">Reject</button>
         <button class="btn secondary" data-status="pending">Return to pending</button>
       </div>
+      <div class="enrich-box"></div>
     </article>
   `).join('');
 }
 
 queue.addEventListener('click',async e=>{
+  const enrichBtn=e.target.closest('[data-enrich]');
+  if(enrichBtn){
+    const item=enrichBtn.closest('.item'), box=item.querySelector('.enrich-box');
+    enrichBtn.disabled=true;enrichBtn.textContent='Checking source…';
+    try{
+      const r=await fetch('/api/admin-enrich-submission',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:Number(item.dataset.id)})});
+      const x=await r.json();if(!r.ok)throw new Error(x.error||'Could not enrich');
+      box.classList.add('open');
+      box.innerHTML=`<h4 style="margin:0 0 10px">Enrichment preview</h4>
+        <div class="enrich-grid">
+          <label>Venue name<input data-f="venue_name" value="${esc(x.venue_name||'')}"></label>
+          <label>Market<input data-f="market" value="${esc(x.market||'')}"></label>
+          <label>Area<input data-f="area" value="${esc(x.area||'')}"></label>
+          <label>Happy hour<input data-f="happy_hour" value="${esc(x.happy_hour||'')}"></label>
+          <label style="grid-column:1/-1">Street address<input data-f="address" value="${esc(x.address||'')}"></label>
+          <label>Latitude<input data-f="latitude" value="${esc(x.latitude??'')}"></label>
+          <label>Longitude<input data-f="longitude" value="${esc(x.longitude??'')}"></label>
+          <label>Days<input data-f="days" value="${esc(x.days||'Confirm days')}"></label>
+          <label style="grid-column:1/-1">Source URL<input data-f="source_url" value="${esc(x.source_url||'')}"></label>
+          <label style="grid-column:1/-1">Deal details<textarea data-f="deal_highlights">${esc(x.deal_highlights||'')}</textarea></label>
+        </div>
+        <div class="confidence">Address: ${esc(x.confidence?.address)} · Location: ${esc(x.confidence?.location)} · Happy hour: ${esc(x.confidence?.happy_hour)}</div>
+        ${x.source_evidence?`<div class="evidence"><strong>Official-source evidence:</strong> ${esc(x.source_evidence)}</div>`:''}
+        ${x.fetch_error?`<div class="evidence"><strong>Source warning:</strong> ${esc(x.fetch_error)}</div>`:''}
+        <div class="actions"><button class="btn" data-publish-enriched>Publish venue</button></div>`;
+    }catch(err){alert(err.message)}finally{enrichBtn.disabled=false;enrichBtn.textContent='Verify & enrich'}
+    return;
+  }
+  const publishBtn=e.target.closest('[data-publish-enriched]');
+  if(publishBtn){
+    const item=publishBtn.closest('.item'),box=item.querySelector('.enrich-box');
+    const data={submission_id:Number(item.dataset.id)};box.querySelectorAll('[data-f]').forEach(el=>data[el.dataset.f]=el.value);
+    publishBtn.disabled=true;publishBtn.textContent='Publishing…';
+    try{const r=await fetch('/api/admin-publish-venue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const x=await r.json();if(!r.ok)throw new Error(x.error||'Publish failed');alert('Venue published successfully.');loadQueue()}catch(err){alert(err.message)}finally{publishBtn.disabled=false;publishBtn.textContent='Publish venue'}
+    return;
+  }
   const btn=e.target.closest('[data-status]');if(!btn)return;
   const item=btn.closest('.item');if(!item)return;
   btn.disabled=true;

@@ -312,3 +312,43 @@
   letter-spacing:.1px;
 }
 .ride-link:hover{filter:brightness(1.15)}
+
+
+/* Native venue-pin controls. A real HTML button is the sole interactive target;
+   Leaflet only positions it. One delegated map handler handles every pin. */
+.happyhr-marker-icon{
+  background:transparent!important;
+  border:0!important;
+  overflow:visible!important;
+}
+.happyhr-pin-button{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  padding:0;
+  margin:0;
+  width:42px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  background:transparent;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+  touch-action:manipulation;
+}
+.happyhr-pin-button:focus-visible{
+  outline:3px solid rgba(15,127,121,.45);
+  outline-offset:2px;
+  border-radius:12px;
+}
+.happyhr-pin-button .adult-map-pin,
+.happyhr-pin-button .checking-hh-pin{
+  pointer-events:none!important;
+}
+.happyhr-pin-button:hover .adult-map-pin,
+.happyhr-pin-button:focus-visible .adult-map-pin{
+  transform:rotate(-45deg) scale(1.12);
+  filter:brightness(1.06);
+}
+.checking-pin-button{opacity:.56}
+.checking-pin-button:hover{opacity:.82}

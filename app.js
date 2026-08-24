@@ -282,6 +282,8 @@ function buildAreaOptions(){const select=byId('neighborhoodFilter'),cfg=islandCo
 function setIsland(island){if(!islandConfigs[island])return;state.island=island;state.neighborhood='all';updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland();closeModal();history.replaceState(null,'',`${location.pathname}?${['Oahu','Maui','Kauai','Hawaii'].includes(island)?'island':'market'}=${encodeURIComponent(island)}`);track('market_select',{market:island})}
 
 let hhMap,regionMarkers=[];
+const mapPinRegistry=new Map();
+let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
 function markerCacheKey(v){return `happyhr:geo:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 function cachedVenueCoords(v){
@@ -304,6 +306,29 @@ async function geocodeVenue(v){
     return [lat,lng];
   }catch(e){return null}
 }
+function installMapPinDelegation(){
+  const mapEl=byId('map');
+  if(!mapEl||mapEl.dataset.happyhrPinDelegation==='1')return;
+  mapEl.dataset.happyhrPinDelegation='1';
+
+  // One capture-phase handler owns ALL map-pin interaction. This works for
+  // immediate markers, cached markers and markers added later after geocoding.
+  mapEl.addEventListener('click',(e)=>{
+    const btn=e.target.closest?.('.happyhr-pin-button');
+    if(!btn||!mapEl.contains(btn))return;
+    const entry=mapPinRegistry.get(btn.dataset.pinId);
+    if(!entry)return;
+    e.preventDefault();
+    e.stopPropagation();
+    activateVenueMarker(entry.marker,entry.venue);
+  },true);
+
+  // Prevent Leaflet from interpreting a pin press as the start of a map drag.
+  mapEl.addEventListener('pointerdown',(e)=>{
+    const btn=e.target.closest?.('.happyhr-pin-button');
+    if(btn&&mapEl.contains(btn))e.stopPropagation();
+  },true);
+}
 function activateVenueMarker(marker,v){
   // Keep every map marker behavior identical regardless of how its coordinates were obtained.
   try{marker.openPopup()}catch(e){}
@@ -311,16 +336,9 @@ function activateVenueMarker(marker,v){
   focusVenueFromMap(v);
 }
 function wireVenueMarker(marker,v){
-  let lastActivation=0;
-  const activate=()=>{
-    const now=Date.now();
-    if(now-lastActivation<250)return;
-    lastActivation=now;
-    activateVenueMarker(marker,v);
-  };
-
-  // Leaflet event path (desktop + touch).
-  marker.on('click',activate);
+  // Leaflet click remains as a fallback. Primary interaction comes from the
+  // native button + delegated map handler installed in installMapPinDelegation().
+  marker.on('click',()=>activateVenueMarker(marker,v));
   marker.on('popupopen',()=>{
     const popupEl=marker.getPopup()?.getElement?.();
     const ride=popupEl?.querySelector('.ride-link');
@@ -329,37 +347,6 @@ function wireVenueMarker(marker,v){
       ride.addEventListener('click',()=>track('ride_uber_click',{venue:v.name,market:state.island,area:areaLabel(v)}));
     }
   });
-
-  const bindDom=()=>{
-    const el=marker.getElement();
-    if(!el||el.dataset.happyhrBound==='1')return;
-    el.dataset.happyhrBound='1';
-    el.style.pointerEvents='auto';
-    el.style.cursor='pointer';
-    el.setAttribute('role','button');
-    el.setAttribute('aria-label',`${v.name} — show venue details`);
-    el.tabIndex=0;
-
-    // Make the entire visible pin shape interactive, not only Leaflet's icon box.
-    const visual=el.querySelector('.adult-map-pin,.venue-map-pin,.no-hh-pin,.checking-hh-pin');
-    if(visual){
-      visual.style.pointerEvents='auto';
-      visual.style.cursor='pointer';
-    }
-
-    el.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();activate()},true);
-    el.addEventListener('pointerup',(e)=>{
-      if(e.pointerType==='touch'){e.preventDefault();e.stopPropagation();activate()}
-    },true);
-    el.addEventListener('keydown',(e)=>{
-      if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();activate()}
-    });
-  };
-
-  // IMPORTANT: register before addTo(). Also bind immediately if Leaflet has
-  // already created the element (for redraws / async geocoded markers).
-  marker.on('add',()=>requestAnimationFrame(bindDom));
-  requestAnimationFrame(bindDom);
   return marker;
 }
 
@@ -386,12 +373,12 @@ function rideButtonHtml(v,coords){
   return `<a class="ride-link ride-uber" href="${url}" target="_blank" rel="noopener" data-ride-venue="${String(v.name||"").replace(/"/g,'&quot;')}">Get a ride ↗</a>`;
 }
 
-function markerPresentation(v,status,coords){
+function markerPresentation(v,status,coords,pinId){
   if(status==='verified'){
     const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
     return {
       className:'happyhr-marker-icon',
-      visual:`<div class="happyhr-marker-hitbox"><div class="adult-map-pin verified-hh" title="Verified happy hour: ${String(v.name||'').replace(/"/g,'&quot;')}"><span class="adult-pin-face adult-pin-happy" aria-hidden="true"><i></i><b></b><em></em></span></div></div>`,
+      visual:`<button type="button" class="happyhr-pin-button" data-pin-id="${pinId}" aria-label="Show ${String(v.name||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} details"><span class="adult-map-pin verified-hh" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></button>`,
       popup:`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}</div></div>`,
       z:200,
       opacity:1
@@ -400,7 +387,7 @@ function markerPresentation(v,status,coords){
   if(status==='none'){
     return {
       className:'happyhr-marker-icon',
-      visual:`<div class="happyhr-marker-hitbox"><div class="adult-map-pin no-hh-adult" title="Verified: no current happy hour"><span class="adult-pin-face adult-pin-sad" aria-hidden="true"><i></i><b></b><em></em></span></div></div>`,
+      visual:`<button type="button" class="happyhr-pin-button" data-pin-id="${pinId}" aria-label="Show ${String(v.name||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} details"><span class="adult-map-pin no-hh-adult" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
       popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}</div></div>`,
       z:-50,
       opacity:1
@@ -408,7 +395,7 @@ function markerPresentation(v,status,coords){
   }
   return {
     className:'happyhr-marker-icon checking-marker',
-    visual:`<div class="happyhr-marker-hitbox"><div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div></div>`,
+    visual:`<button type="button" class="happyhr-pin-button checking-pin-button" data-pin-id="${pinId}" aria-label="Show ${String(v.name||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} details"><span class="checking-hh-pin" aria-hidden="true"><span>?</span></span></button>`,
     popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}</div></div>`,
     z:-300,
     opacity:.48
@@ -416,7 +403,8 @@ function markerPresentation(v,status,coords){
 }
 function createVenueMarker(v,coords,status){
   const [lat,lng]=coords;
-  const p=markerPresentation(v,status,coords);
+  const pinId=`pin-${++mapPinSequence}`;
+  const p=markerPresentation(v,status,coords,pinId);
   // Keep the interactive box close to the visible marker. Oversized hitboxes
   // overlap neighboring pins and can steal clicks from one another.
   const icon=L.divIcon({
@@ -436,6 +424,8 @@ function createVenueMarker(v,coords,status){
     bubblingMouseEvents:false
   }).bindPopup(p.popup,{maxWidth:260});
   wireVenueMarker(marker,v);
+  mapPinRegistry.set(pinId,{marker,venue:v});
+  marker.on('remove',()=>mapPinRegistry.delete(pinId));
   marker.addTo(hhMap);
   regionMarkers.push(marker);
   return marker;
@@ -444,7 +434,7 @@ function addVerifiedMarker(v,coords){return createVenueMarker(v,coords,'verified
 function addNoHappyMarker(v,coords){return createVenueMarker(v,coords,'none')}
 function addCheckingMarker(v,coords){return createVenueMarker(v,coords,'checking')}
 async function renderMapMarkers(){
-  if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];
+  if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];mapPinRegistry.clear();
   const renderToken=Symbol('mapRender');renderMapMarkers.token=renderToken;
   const groups=[
     [completeVenuesForMarket(),addVerifiedMarker],
@@ -464,7 +454,7 @@ async function renderMapMarkers(){
 }
 
 function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}
-function initMap(){if(!window.L||hhMap)return;hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);fitCurrentIsland();renderMapMarkers();byId('recenterMap')?.addEventListener('click',fitCurrentIsland);setTimeout(()=>hhMap.invalidateSize(),150);window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100))}
+function initMap(){if(!window.L||hhMap)return;installMapPinDelegation();hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);fitCurrentIsland();renderMapMarkers();byId('recenterMap')?.addEventListener('click',fitCurrentIsland);setTimeout(()=>hhMap.invalidateSize(),150);window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100))}
 function renderCoverage(){const strip=byId('coverageStrip');const regs=currentRegions().filter(r=>r.key!=='__market__');strip.innerHTML=regs.map(r=>{const count=completeVenuesForMarket().filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=currentRegions().find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:b.textContent})}))}
 function refreshAll(){updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland()}
 ['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));

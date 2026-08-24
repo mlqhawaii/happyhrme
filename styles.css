@@ -137,3 +137,10 @@
 .venue-map-marker:hover .venue-map-pin,
 .no-hh-marker:hover .no-hh-pin,
 .checking-hh-marker:hover .checking-hh-pin{filter:brightness(1.08);}
+
+/* Final marker interaction hardening */
+.leaflet-marker-pane .leaflet-marker-icon,
+.leaflet-marker-pane .venue-map-pin,
+.leaflet-marker-pane .no-hh-pin,
+.leaflet-marker-pane .checking-hh-pin{pointer-events:auto!important;cursor:pointer!important}
+.leaflet-marker-pane .leaflet-marker-icon:focus{outline:2px solid rgba(31,156,145,.55);outline-offset:2px}

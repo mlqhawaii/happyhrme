@@ -669,3 +669,51 @@ window.addEventListener('happyhr:market',e=>{let m=e.detail?.market;const aliase
     }catch(err){console.warn(err);status.textContent='The submission box is being configured. Please try again shortly.';}
   });
 })();
+
+
+function initContactForm(){
+  const form=document.getElementById('contactForm');
+  if(!form)return;
+  const status=document.getElementById('contactStatus');
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const fd=new FormData(form);
+    if(String(fd.get('website')||'').trim())return;
+    const subject=String(fd.get('subject')||'').trim();
+    const message=String(fd.get('message')||'').trim();
+    const payload={
+      submission_type:'contact',
+      venue_name:String(fd.get('name')||'Website visitor').trim()||'Website visitor',
+      market:'General contact',
+      area:null,
+      address:null,
+      details:subject?`Subject: ${subject}\n\n${message}`:message,
+      source_url:null,
+      submitter_contact:String(fd.get('email')||'').trim(),
+      status:'pending'
+    };
+    status.textContent='Sending…';
+    try{
+      const r=await fetch(`${SUPABASE_URL}/rest/v1/happy_hour_submissions`,{
+        method:'POST',
+        headers:{
+          apikey:SUPABASE_PUBLISHABLE_KEY,
+          Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+          'Content-Type':'application/json',
+          Prefer:'return=minimal'
+        },
+        body:JSON.stringify(payload)
+      });
+      if(!r.ok)throw new Error(`Submission ${r.status}`);
+      form.reset();
+      status.textContent='Thanks — your message was sent.';
+      track('contact_submission',{source:'website'});
+    }catch(err){
+      console.warn(err);
+      status.textContent='Could not send right now. Please try again shortly.';
+    }
+  });
+}
+
+
+try{initContactForm()}catch(e){console.warn(e)}

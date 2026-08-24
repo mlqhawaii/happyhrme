@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>HappyHr.Me Admin</title>
+<link rel="icon" href="/favicon.png">
+<style>
+:root{--ink:#112c3d;--muted:#667b85;--teal:#0f7f79;--line:#d9e5e3;--bg:#f4f8f7;--danger:#9b3b3b}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{width:min(1180px,calc(100% - 32px));margin:32px auto}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+.brand{font-weight:900;font-size:24px}.brand span{color:var(--teal)}button,input,select,textarea{font:inherit}
+button{cursor:pointer}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px}
+.login{max-width:440px;margin:12vh auto}.login h1{margin-top:0}.login input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;margin:10px 0}
+.btn{border:0;border-radius:9px;padding:10px 13px;font-weight:800;background:var(--teal);color:#fff}.btn.secondary{background:#eef5f4;color:var(--ink)}.btn.danger{background:#f8eeee;color:var(--danger)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.toolbar select{padding:9px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.queue{display:grid;gap:12px}.item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}.item-head{display:flex;justify-content:space-between;gap:12px;align-items:start}
+.badge{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;padding:5px 8px;border-radius:999px;background:#eef6f5;color:var(--teal)}
+.meta{color:var(--muted);font-size:13px;line-height:1.5}.details{white-space:pre-wrap;line-height:1.55;margin:14px 0;padding:12px;background:#f8fbfa;border-radius:10px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field strong{display:block;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.field a{color:var(--teal)}
+.notes{width:100%;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.empty{text-align:center;padding:50px;color:var(--muted)}#adminView[hidden],#loginView[hidden]{display:none!important}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.item-head,.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div id="loginView" class="wrap login card">
+  <h1>HappyHr.Me Admin</h1>
+  <p>Moderate corrections, new venues and contact messages.</p>
+  <form id="loginForm">
+    <input id="password" type="password" autocomplete="current-password" placeholder="Admin password" required>
+    <button class="btn" type="submit">Sign in</button>
+    <p id="loginStatus" class="meta"></p>
+  </form>
+</div>
+
+<div id="adminView" class="wrap" hidden>
+  <div class="top">
+    <div><div class="brand">HappyHr<span>.Me</span> Admin</div><div class="meta">Community moderation queue</div></div>
+    <button id="logoutBtn" class="btn secondary">Log out</button>
+  </div>
+
+  <div class="toolbar card">
+    <label>Status
+      <select id="statusFilter">
+        <option value="pending">Pending</option>
+        <option value="reviewed">Reviewed / approved</option>
+        <option value="applied">Applied / published</option>
+        <option value="rejected">Rejected</option>
+        <option value="all">All</option>
+      </select>
+    </label>
+    <label>Type
+      <select id="typeFilter">
+        <option value="all">All</option>
+        <option value="new_venue">New venues</option>
+        <option value="correction">Corrections</option>
+        <option value="contact">Contact messages</option>
+      </select>
+    </label>
+    <button id="refreshBtn" class="btn secondary">Refresh</button>
+    <span id="count" class="meta"></span>
+  </div>
+
+  <div id="queue" class="queue"></div>
+</div>
+
+<script>
+const loginView=document.getElementById('loginView');
+const adminView=document.getElementById('adminView');
+const queue=document.getElementById('queue');
+const statusFilter=document.getElementById('statusFilter');
+const typeFilter=document.getElementById('typeFilter');
+const count=document.getElementById('count');
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmtDate(s){try{return new Date(s).toLocaleString()}catch{return s||''}}
+function labelType(t){return ({new_venue:'New venue',correction:'Correction',contact:'Contact'})[t]||t}
+
+async function checkSession(){
+  const r=await fetch('/api/admin-session',{cache:'no-store'});
+  if(r.ok){loginView.hidden=true;adminView.hidden=false;await loadQueue()}
+  else{loginView.hidden=false;adminView.hidden=true}
+}
+document.getElementById('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const status=document.getElementById('loginStatus');status.textContent='Signing in…';
+  const r=await fetch('/api/admin-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:document.getElementById('password').value})});
+  if(r.ok){status.textContent='';loginView.hidden=true;adminView.hidden=false;loadQueue()}
+  else{const x=await r.json().catch(()=>({}));status.textContent=x.error||'Could not sign in'}
+});
+document.getElementById('logoutBtn').addEventListener('click',async()=>{
+  await fetch('/api/admin-logout',{method:'POST'});location.reload();
+});
+document.getElementById('refreshBtn').addEventListener('click',loadQueue);
+statusFilter.addEventListener('change',loadQueue);
+typeFilter.addEventListener('change',loadQueue);
+
+async function loadQueue(){
+  queue.innerHTML='<div class="empty">Loading…</div>';
+  const r=await fetch(`/api/admin-submissions?status=${encodeURIComponent(statusFilter.value)}&type=${encodeURIComponent(typeFilter.value)}`,{cache:'no-store'});
+  if(r.status===401)return location.reload();
+  const rows=await r.json().catch(()=>[]);
+  if(!r.ok){queue.innerHTML=`<div class="empty">${esc(rows.error||'Could not load queue')}</div>`;return}
+  count.textContent=`${rows.length} item${rows.length===1?'':'s'}`;
+  if(!rows.length){queue.innerHTML='<div class="empty card">Nothing in this queue.</div>';return}
+  queue.innerHTML=rows.map(row=>`
+    <article class="item" data-id="${row.id}">
+      <div class="item-head">
+        <div>
+          <span class="badge">${esc(labelType(row.submission_type))}</span>
+          <h3>${esc(row.submission_type==='contact' ? (row.venue_name||'Website contact') : row.venue_name)}</h3>
+          <div class="meta">${esc(row.market||'')} ${row.area?'· '+esc(row.area):''} · ${esc(fmtDate(row.created_at))}</div>
+        </div>
+        <span class="badge">${esc(row.status)}</span>
+      </div>
+      <div class="grid">
+        ${row.address?`<div class="field"><strong>Address</strong>${esc(row.address)}</div>`:''}
+        ${row.submitter_contact?`<div class="field"><strong>Contact</strong><a href="mailto:${encodeURIComponent(row.submitter_contact)}">${esc(row.submitter_contact)}</a></div>`:''}
+        ${row.source_url?`<div class="field"><strong>Source</strong><a href="${esc(row.source_url)}" target="_blank" rel="noopener">Open source ↗</a></div>`:''}
+      </div>
+      <div class="details">${esc(row.details)}</div>
+      <textarea class="notes" placeholder="Private admin notes…">${esc(row.admin_notes||'')}</textarea>
+      <div class="actions">
+        <button class="btn secondary" data-status="reviewed">Approve / reviewed</button>
+        <button class="btn" data-status="applied">Mark applied</button>
+        <button class="btn danger" data-status="rejected">Reject</button>
+        <button class="btn secondary" data-status="pending">Return to pending</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+queue.addEventListener('click',async e=>{
+  const btn=e.target.closest('[data-status]');if(!btn)return;
+  const item=btn.closest('.item');if(!item)return;
+  btn.disabled=true;
+  const r=await fetch('/api/admin-update-submission',{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      id:Number(item.dataset.id),
+      status:btn.dataset.status,
+      admin_notes:item.querySelector('.notes').value
+    })
+  });
+  btn.disabled=false;
+  if(r.ok)loadQueue(); else alert('Could not update this submission.');
+});
+checkSession();
+</script>
+</body>
+</html>

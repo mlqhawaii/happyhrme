@@ -333,7 +333,7 @@ function wireVenueMarker(marker,v){
     el.tabIndex=0;
 
     // Make the entire visible pin shape interactive, not only Leaflet's icon box.
-    const visual=el.querySelector('.venue-map-pin,.no-hh-pin,.checking-hh-pin');
+    const visual=el.querySelector('.adult-map-pin,.venue-map-pin,.no-hh-pin,.checking-hh-pin');
     if(visual){
       visual.style.pointerEvents='auto';
       visual.style.cursor='pointer';
@@ -359,7 +359,7 @@ function markerPresentation(v,status){
     const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
     return {
       className:'happyhr-marker-icon',
-      visual:`<div class="happyhr-marker-hitbox"><div class="venue-map-pin verified-hh" title="Verified happy hour: ${String(v.name||'').replace(/"/g,'&quot;')}"><span aria-hidden="true">🙂</span></div></div>`,
+      visual:`<div class="happyhr-marker-hitbox"><div class="adult-map-pin verified-hh" title="Verified happy hour: ${String(v.name||'').replace(/"/g,'&quot;')}"><span class="adult-pin-face adult-pin-happy" aria-hidden="true"><i></i><b></b><em></em></span></div></div>`,
       popup:`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}${sourceLink}</div>`,
       z:200,
       opacity:1
@@ -368,7 +368,7 @@ function markerPresentation(v,status){
   if(status==='none'){
     return {
       className:'happyhr-marker-icon',
-      visual:`<div class="happyhr-marker-hitbox"><div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div></div>`,
+      visual:`<div class="happyhr-marker-hitbox"><div class="adult-map-pin no-hh-adult" title="Verified: no current happy hour"><span class="adult-pin-face adult-pin-sad" aria-hidden="true"><i></i><b></b><em></em></span></div></div>`,
       popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,
       z:-50,
       opacity:1

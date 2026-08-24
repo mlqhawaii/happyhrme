@@ -74,16 +74,45 @@ function normalizeIsland(value){
   return value;
 }
 function rowToVenue(row){return {
-  id:row.id,name:row.venue_name,island:normalizeIsland(row.island),city:row.city||"",market:row.market||"",metroSlug:row.metro_slug||"",
+  id:row.id,name:row.venue_name,island:normalizeIsland(row.island),city:row.city||"",market:row.market||"",metroSlug:row.metro_slug||"",state:row.state||"",country:row.country||"US",
   neighborhood:row.neighborhood||row.area||"",area:row.area||row.neighborhood||"",
   address:row.address||"",latitude:row.latitude==null?null:Number(row.latitude),longitude:row.longitude==null?null:Number(row.longitude),
   days:row.days||"Confirm hours",early:row.early_display||"Confirm current hours",late:row.late_display||"—",
   beer:row.cheapest_beer==null?null:Number(row.cheapest_beer),drinks:row.drink_highlight||"—",food:row.food_highlight||"—",
   tags:Array.isArray(row.tags)?row.tags:[],source:row.source_url||"#",slots:row.schedule&&typeof row.schedule==="object"?row.schedule:{}
 }}
+const MARKET_STATE_CODES={
+  Oahu:"HI",Maui:"HI",Kauai:"HI",Hawaii:"HI",
+  "los-angeles":"CA","san-diego":"CA","san-francisco":"CA",seattle:"WA",portland:"OR","las-vegas":"NV",phoenix:"AZ",denver:"CO",austin:"TX",dallas:"TX",houston:"TX","san-antonio":"TX",chicago:"IL",nashville:"TN","new-york":"NY",boston:"MA","washington-dc":"DC",philadelphia:"PA",atlanta:"GA",miami:"FL",tampa:"FL","new-orleans":"LA"
+};
+const MARKET_TIMEZONES={
+  Oahu:"Pacific/Honolulu",Maui:"Pacific/Honolulu",Kauai:"Pacific/Honolulu",Hawaii:"Pacific/Honolulu",
+  "los-angeles":"America/Los_Angeles","san-diego":"America/Los_Angeles","san-francisco":"America/Los_Angeles",seattle:"America/Los_Angeles",portland:"America/Los_Angeles","las-vegas":"America/Los_Angeles",phoenix:"America/Phoenix",denver:"America/Denver",austin:"America/Chicago",dallas:"America/Chicago",houston:"America/Chicago","san-antonio":"America/Chicago",chicago:"America/Chicago",nashville:"America/Chicago","new-york":"America/New_York",boston:"America/New_York","washington-dc":"America/New_York",philadelphia:"America/New_York",atlanta:"America/New_York",miami:"America/New_York",tampa:"America/New_York","new-orleans":"America/Chicago"
+};
+function normalizedStateCode(v){
+  const raw=String(v||"").trim().toUpperCase();
+  const full={HAWAII:"HI",CALIFORNIA:"CA",WASHINGTON:"WA",OREGON:"OR",NEVADA:"NV",ARIZONA:"AZ",COLORADO:"CO",TEXAS:"TX",ILLINOIS:"IL",TENNESSEE:"TN","NEW YORK":"NY",MASSACHUSETTS:"MA","DISTRICT OF COLUMBIA":"DC",PENNSYLVANIA:"PA",GEORGIA:"GA",FLORIDA:"FL",LOUISIANA:"LA"};
+  return full[raw]||raw;
+}
+function addressStateCode(address){
+  const m=String(address||"").toUpperCase().match(/,\s*([A-Z]{2})(?:\s+\d{5}(?:-\d{4})?)?(?:,|$)/);
+  return m?m[1]:"";
+}
+function venueBelongsToMarket(v,key){
+  const expected=MARKET_STATE_CODES[key];
+  if(!expected) return true;
+  const explicit=normalizedStateCode(v.state);
+  const fromAddress=addressStateCode(v.address);
+  if(explicit && explicit.length<=2 && explicit!==expected) return false;
+  if(fromAddress && fromAddress!==expected) return false;
+  if(key==="Oahu" && Number.isFinite(v.latitude) && Number.isFinite(v.longitude)){
+    if(v.latitude<21.20||v.latitude>21.75||v.longitude<-158.35||v.longitude>-157.60) return false;
+  }
+  return true;
+}
 async function loadVenuesFromSupabase(){
   const url=`${SUPABASE_URL}/rest/v1/happy_hours?select=*&active=eq.true&order=venue_name.asc`;
-  try{const response=await fetch(url,{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,Accept:"application/json"}});if(!response.ok)throw new Error(`Supabase ${response.status}`);const rows=await response.json();if(!Array.isArray(rows)||!rows.length)throw new Error("No active venues returned");venues=rows.map(rowToVenue);document.documentElement.dataset.dataSource="supabase";refreshAll();}
+  try{const response=await fetch(url,{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,Accept:"application/json"}});if(!response.ok)throw new Error(`Supabase ${response.status}`);const rows=await response.json();if(!Array.isArray(rows)||!rows.length)throw new Error("No active venues returned");venues=rows.map(rowToVenue).filter(v=>venueBelongsToMarket(v,venueMarketKey(v)));document.documentElement.dataset.dataSource="supabase";refreshAll();}
   catch(error){console.warn("Using bundled fallback because Supabase could not be reached.",error);document.documentElement.dataset.dataSource="fallback";refreshAll();}
 }
 
@@ -132,18 +161,24 @@ function venueMarketKey(v){
 const state={q:"",island:"Oahu",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended",view:"map"};
 const byId=id=>document.getElementById(id),grid=byId('venueGrid'),fullGrid=byId('venueGridFull'),resultCount=byId('resultCount');
 function track(name,params={}){try{if(typeof gtag==='function')gtag('event',name,params)}catch(e){}}
-function honoluluNow(){const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Pacific/Honolulu',weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};let hour=Number(map.hour);if(hour===24)hour=0;return{day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`}}
-function statusFor(v){const n=honoluluNow(),slots=v.slots[n.day]||[];for(const[s,e]of slots){if(n.hour>=s&&n.hour<e)return{key:'open',label:'Open now'}}const future=slots.find(([s])=>s>n.hour);if(future){let h=Math.floor(future[0]),m=future[0]%1?30:0;return{key:'later',label:`Starts ${h>12?h-12:h}:${m?'30':'00'} ${h>=12?'PM':'AM'}`}}return{key:'closed',label:slots.length?'Done today':'Check hours'}}
+function marketNow(){const tz=MARKET_TIMEZONES[state.island]||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};let hour=Number(map.hour);if(hour===24)hour=0;return{day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`}}
+function statusFor(v){const n=marketNow(),slots=v.slots[n.day]||[];for(const[s,e]of slots){if(n.hour>=s&&n.hour<e)return{key:'open',label:'Open now'}}const future=slots.find(([s])=>s>n.hour);if(future){let h=Math.floor(future[0]),m=future[0]%1?30:0;return{key:'later',label:`Starts ${h>12?h-12:h}:${m?'30':'00'} ${h>=12?'PM':'AM'}`}}return{key:'closed',label:slots.length?'Done today':'Check hours'}}
 function isLate(v){return v.tags.includes('late')||v.late!=='—'}
 function filtered(){let list=venues.filter(v=>{if(venueMarketKey(v)!==state.island)return false;const text=(v.name+' '+v.area+' '+v.drinks+' '+v.food+' '+v.tags.join(' ')).toLowerCase();if(state.q&&!text.includes(state.q.toLowerCase()))return false;if(state.neighborhood!=='all'&&v.neighborhood!==state.neighborhood)return false;if((state.open||state.time==='open')&&statusFor(v).key!=='open')return false;if(state.time==='late'&&!isLate(v))return false;if(state.price!=='any'&&!(v.beer&&v.beer<=Number(state.price)))return false;return true});if(state.sort==='beer')list.sort((a,b)=>(a.beer??99)-(b.beer??99));if(state.sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name));if(state.sort==='recommended')list.sort((a,b)=>{const sa=statusFor(a).key==='open'?0:1,sb=statusFor(b).key==='open'?0:1;return sa-sb||(a.beer??99)-(b.beer??99)});return list}
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase()}
-function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b>`);if(v.drinks&&v.drinks!=='—')parts.push(`<span>${v.drinks}</span>`);if(v.food&&v.food!=='—')parts.push(`<span>${v.food}</span>`);return parts.slice(0,2).join('')||'<span>See venue for current deal</span>'}
+function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b>`);if(v.drinks&&v.drinks!=='—')parts.push(`<span>${v.drinks}</span>`);if(v.food&&v.food!=='—')parts.push(`<span>${v.food}</span>`);return parts.slice(0,2).join('')||''}
 function cardHTML(v,full=false){const s=statusFor(v);return `<article class="venue-row"><div class="venue-main"><div class="venue-avatar">${initials(v.name)}</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status ${s.key}">${s.label}</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
-function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?list.map(v=>cardHTML(v,false)).join(''):'<div style="padding:30px">No matching happy hours yet. We are expanding this city now.</div>';fullGrid.innerHTML=list.length?list.map(v=>cardHTML(v,true)).join(''):'<div style="padding:30px">No matching happy hours yet.</div>';byId('localClock').textContent=honoluluNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
+function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
+function groupedHTML(list,full=false){
+  const groups=new Map();
+  list.forEach(v=>{const area=areaLabel(v);if(!groups.has(area))groups.set(area,[]);groups.get(area).push(v)});
+  return [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([area,items])=>`<section class="area-group"><div class="area-group-head"><div><span class="area-kicker">AREA</span><h3>${area}</h3></div><span class="area-count">${items.length} spot${items.length===1?'':'s'}</span></div>${items.map(v=>cardHTML(v,full)).join('')}</section>`).join('');
+}
+function render(){const list=filtered();resultCount.textContent=list.length;grid.innerHTML=list.length?groupedHTML(list,false):'<div style="padding:30px">No matching happy hours yet. We are expanding this city now.</div>';fullGrid.innerHTML=list.length?groupedHTML(list,true):'<div style="padding:30px">No matching happy hours yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
 function sync(){const sel=byId('islandFilter');if(sel&&[...sel.options].some(o=>o.value===state.island))sel.value=state.island;byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
 function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();fitCurrentIsland();track('filters_cleared',{island:state.island})}
 function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>hhMap.invalidateSize(),80);track('view_change',{view:mode,island:state.island})}
-function updateContextText(){const label=islandNames[state.island]||islandConfigs[state.island]?.label||state.island;byId('cityPill').textContent=`${label} ▾`;byId('heroEyebrow').textContent=`${label.toUpperCase()} · CURATED HAPPY HOURS`;byId('heroDescription').textContent=`Find current drink and food deals around ${label} — by area, time and price.`;byId('mapBadgeTitle').textContent=label;byId('resultsTitle').textContent=`Deals around ${label}`;byId('fullListTitle').textContent=`All ${label} happy hours`;buildAreaOptions()}
+function updateContextText(){const label=islandNames[state.island]||islandConfigs[state.island]?.label||state.island;byId('cityPill').textContent=`${label} ▾`;byId('heroEyebrow').textContent=`${label.toUpperCase()} · VERIFIED HAPPY HOURS`;byId('heroDescription').textContent=`Find current drink and food deals around ${label} — by area, time and price.`;byId('mapBadgeTitle').textContent=label;byId('resultsTitle').textContent=`Deals around ${label}`;byId('fullListTitle').textContent=`All ${label} happy hours`;buildAreaOptions()}
 function buildAreaOptions(){const select=byId('neighborhoodFilter'),cfg=islandConfigs[state.island];const regions=(cfg?.regions||[]).filter(r=>r.key!=='__market__');select.innerHTML='<option value="all">⌖ All areas</option>'+regions.map(r=>`<option value="${r.key}">${r.label}</option>`).join('');}
 function setIsland(island){if(!islandConfigs[island])return;state.island=island;state.neighborhood='all';updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland();closeModal();history.replaceState(null,'',`${location.pathname}?${['Oahu','Maui','Kauai','Hawaii'].includes(island)?'island':'market'}=${encodeURIComponent(island)}`);track('market_select',{market:island})}
 
@@ -160,10 +195,10 @@ byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;rende
 byId('mapViewBtn').onclick=()=>setView('map');byId('listViewBtn').onclick=()=>setView('list');byId('navMap').onclick=()=>setView('map');byId('navList').onclick=()=>setView('list');byId('clearFilters').onclick=clearFilters;byId('clearFilters2').onclick=clearFilters;
 const modal=byId('cityModal');function closeModal(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true')}byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=closeModal;modal.querySelector('.modal-backdrop').onclick=closeModal;modal.querySelectorAll('[data-island]').forEach(b=>b.addEventListener('click',()=>setIsland(b.dataset.island)));
 const params=new URLSearchParams(location.search);if(islandConfigs[params.get('market')])state.island=params.get('market');else if(islandConfigs[params.get('island')])state.island=params.get('island');const requestedArea=params.get('area');updateContextText();if(requestedArea&&currentRegions().some(r=>r.key===requestedArea))state.neighborhood=requestedArea;
-sync();renderCoverage();render();initMap();loadVenuesFromSupabase();setInterval(()=>{byId('localClock').textContent=honoluluNow().label;render()},60000);
+sync();renderCoverage();render();initMap();loadVenuesFromSupabase();setInterval(()=>{byId('localClock').textContent=marketNow().label;render()},60000);
 
 
-window.addEventListener('happyhr:market',e=>{const m=e.detail?.market;if(m&&islandConfigs[m]&&state.island!==m)setIsland(m);});
+window.addEventListener('happyhr:market',e=>{let m=e.detail?.market;const aliases={honolulu:'Oahu',maui:'Maui',kauai:'Kauai','hawaii-island':'Hawaii'};m=aliases[m]||m;if(m&&islandConfigs[m]&&state.island!==m)setIsland(m);});
 // ===== HappyHr national market layer =====
 (function(){
   const supported = window.HAPPYHR_SUPPORTED_MARKETS || {};

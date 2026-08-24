@@ -168,7 +168,20 @@ queue.addEventListener('click',async e=>{
     const item=publishBtn.closest('.item'),box=item.querySelector('.enrich-box');
     const data={submission_id:Number(item.dataset.id)};box.querySelectorAll('[data-f]').forEach(el=>data[el.dataset.f]=el.value);
     publishBtn.disabled=true;publishBtn.textContent='Publishing…';
-    try{const r=await fetch('/api/admin-publish-venue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const x=await r.json();if(!r.ok)throw new Error(x.error||'Publish failed');alert('Venue published successfully.');loadQueue()}catch(err){alert(err.message)}finally{publishBtn.disabled=false;publishBtn.textContent='Publish venue'}
+    try{
+      const r=await fetch('/api/admin-publish-venue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const raw=await r.text();
+      let x={};
+      try{x=raw?JSON.parse(raw):{}}catch{x={error:raw}}
+      if(!r.ok)throw new Error(x.error||x.message||raw||`Publish failed (${r.status})`);
+      alert('Venue published successfully.');
+      loadQueue();
+    }catch(err){
+      alert(err.message||'Publish failed');
+    }finally{
+      publishBtn.disabled=false;
+      publishBtn.textContent='Publish venue';
+    }
     return;
   }
   const btn=e.target.closest('[data-status]');if(!btn)return;

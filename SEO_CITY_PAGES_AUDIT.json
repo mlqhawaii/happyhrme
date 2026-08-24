@@ -1,0 +1,29 @@
+{
+  "new_mainland_city_pages": 22,
+  "existing_hawaii_pages": 12,
+  "total_sitemap_urls": 35,
+  "new_pages": [
+    "/los-angeles-happy-hour",
+    "/san-diego-happy-hour",
+    "/san-francisco-happy-hour",
+    "/seattle-happy-hour",
+    "/portland-happy-hour",
+    "/las-vegas-happy-hour",
+    "/phoenix-happy-hour",
+    "/denver-happy-hour",
+    "/austin-happy-hour",
+    "/dallas-happy-hour",
+    "/houston-happy-hour",
+    "/san-antonio-happy-hour",
+    "/chicago-happy-hour",
+    "/nashville-happy-hour",
+    "/new-york-happy-hour",
+    "/boston-happy-hour",
+    "/washington-dc-happy-hour",
+    "/philadelphia-happy-hour",
+    "/atlanta-happy-hour",
+    "/miami-happy-hour",
+    "/tampa-happy-hour",
+    "/new-orleans-happy-hour"
+  ]
+}

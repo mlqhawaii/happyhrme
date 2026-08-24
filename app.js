@@ -204,14 +204,15 @@ function filtered(){
     return true;
   });
 
-  // Keep one continuous list, ordered by area first. Inside an area, verified
-  // happy hours come first, then verified-no-happy-hour, then venues still being checked.
+  // Trust-first ordering: verified happy hours are always shown first,
+  // followed by explicitly verified no-happy-hour venues, then venues still being checked.
+  // Within each status group, keep neighborhoods/areas together for easy scanning.
   list.sort((a,b)=>{
-    const areaCompare=areaLabel(a).localeCompare(areaLabel(b),undefined,{sensitivity:'base'});
-    if(areaCompare!==0)return areaCompare;
     const rank={verified:0,none:1,checking:2};
     const kr=(rank[venueKnowledgeState(a)]??9)-(rank[venueKnowledgeState(b)]??9);
     if(kr!==0)return kr;
+    const areaCompare=areaLabel(a).localeCompare(areaLabel(b),undefined,{sensitivity:'base'});
+    if(areaCompare!==0)return areaCompare;
     if(state.sort==='beer')return (a.beer??99)-(b.beer??99)||a.name.localeCompare(b.name);
     if(state.sort==='name')return a.name.localeCompare(b.name);
     if(venueKnowledgeState(a)==='verified'&&venueKnowledgeState(b)==='verified'){
@@ -260,7 +261,7 @@ function renderMapMarkers(){if(!hhMap||!window.L)return;regionMarkers.forEach(m=
   verifiedNoHappyHourForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div>`,iconSize:[34,38],iconAnchor:[17,36],popupAnchor:[0,-31]});const marker=L.marker([v.latitude,v.longitude],{icon}).addTo(hhMap).bindPopup(`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,{maxWidth:240});regionMarkers.push(marker)});
   // Known venues that are still being checked appear as neutral question-mark pins.
   // This makes coverage visible without falsely claiming they do not offer happy hour.
-  pendingVenuesForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'checking-hh-marker',html:`<div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div>`,iconSize:[32,36],iconAnchor:[16,34],popupAnchor:[0,-29]});const marker=L.marker([v.latitude,v.longitude],{icon}).addTo(hhMap).bindPopup(`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,{maxWidth:250});regionMarkers.push(marker)});
+  pendingVenuesForMarket().filter(v=>Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)).forEach(v=>{const icon=L.divIcon({className:'checking-hh-marker',html:`<div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div>`,iconSize:[22,24],iconAnchor:[11,22],popupAnchor:[0,-19]});const marker=L.marker([v.latitude,v.longitude],{icon,opacity:.62,zIndexOffset:-300}).addTo(hhMap).bindPopup(`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,{maxWidth:250});regionMarkers.push(marker)});
 }
 function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}
 function initMap(){if(!window.L||hhMap)return;hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(hhMap);fitCurrentIsland();renderMapMarkers();byId('recenterMap')?.addEventListener('click',fitCurrentIsland);setTimeout(()=>hhMap.invalidateSize(),150);window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100))}

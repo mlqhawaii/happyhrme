@@ -117,7 +117,7 @@
 .venue-row-checking{background:#fbfcfc}
 .venue-row-none{background:#faf9f8}
 .checking-hh-marker{background:transparent!important;border:0!important}
-.checking-hh-pin{position:relative;width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;background:#7c8b91;color:#fff;border:2px solid rgba(255,255,255,.96);box-shadow:0 3px 10px rgba(0,0,0,.24)}
-.checking-hh-pin span{transform:rotate(45deg);display:block;font:800 17px/1 Manrope,Arial,sans-serif}
-.checking-hh-marker:hover .checking-hh-pin{transform:rotate(-45deg) scale(1.1)}
+.checking-hh-pin{position:relative;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;background:#98a3a7;color:#fff;border:1.5px solid rgba(255,255,255,.9);box-shadow:0 2px 5px rgba(0,0,0,.16);opacity:.78}
+.checking-hh-pin span{transform:rotate(45deg);display:block;font:800 11px/1 Manrope,Arial,sans-serif}
+.checking-hh-marker:hover .checking-hh-pin{transform:rotate(-45deg) scale(1.08);opacity:.95}
 .checking-popup span{display:block;margin-top:5px;color:#738089;font-size:11px}

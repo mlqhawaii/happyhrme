@@ -121,3 +121,11 @@
 .checking-hh-pin span{transform:rotate(45deg);display:block;font:800 11px/1 Manrope,Arial,sans-serif}
 .checking-hh-marker:hover .checking-hh-pin{transform:rotate(-45deg) scale(1.08);opacity:.95}
 .checking-popup span{display:block;margin-top:5px;color:#738089;font-size:11px}
+
+/* Map → list focus */
+.venue-row.map-selected{
+  position:relative;
+  box-shadow: inset 4px 0 0 #1f9c91, 0 0 0 2px rgba(31,156,145,.18);
+  background:rgba(231,248,244,.82);
+  transition:background .25s ease,box-shadow .25s ease;
+}

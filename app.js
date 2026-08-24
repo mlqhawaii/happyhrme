@@ -159,7 +159,7 @@ function venueMarketKey(v){
   if(slug) return slug;
   return v.island;
 }
-const state={q:"",island:"Oahu",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended",view:"map"};
+const state={q:"",island:"Oahu",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended",view:"map",selectedVenueKey:null};
 const byId=id=>document.getElementById(id),grid=byId('venueGrid'),fullGrid=byId('venueGridFull'),resultCount=byId('resultCount');
 function track(name,params={}){try{if(typeof gtag==='function')gtag('event',name,params)}catch(e){}}
 function marketNow(){const tz=MARKET_TIMEZONES[state.island]||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};let hour=Number(map.hour);if(hour===24)hour=0;return{day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`}}
@@ -208,6 +208,11 @@ function filtered(){
   // followed by explicitly verified no-happy-hour venues, then venues still being checked.
   // Within each status group, keep neighborhoods/areas together for easy scanning.
   list.sort((a,b)=>{
+    if(state.selectedVenueKey){
+      const as=venueSelectionKey(a)===state.selectedVenueKey?0:1;
+      const bs=venueSelectionKey(b)===state.selectedVenueKey?0:1;
+      if(as!==bs)return as-bs;
+    }
     const rank={verified:0,none:1,checking:2};
     const kr=(rank[venueKnowledgeState(a)]??9)-(rank[venueKnowledgeState(b)]??9);
     if(kr!==0)return kr;
@@ -223,17 +228,49 @@ function filtered(){
   });
   return list;
 }
+function venueSelectionKey(v){return String(v.id||v.google_place_id||`${venueMarketKey(v)}|${v.name}|${areaLabel(v)}`).toLowerCase()}
+function focusVenueFromMap(v){
+  const key=venueSelectionKey(v);
+  state.selectedVenueKey=key;
+
+  // If a current filter hides this venue, relax only the filters necessary
+  // so the clicked map venue can actually appear in the list.
+  let visible=filtered().some(x=>venueSelectionKey(x)===key);
+  if(!visible){
+    state.q="";
+    state.neighborhood="all";
+    state.open=false;
+    state.time="any";
+    state.price="any";
+    sync();
+    renderCoverage();
+  }
+
+  render();
+
+  requestAnimationFrame(()=>{
+    const row=grid?.querySelector(`[data-venue-key="${CSS.escape(key)}"]`);
+    if(row){
+      // The selected venue is sorted first, so put the list itself at the top,
+      // then briefly emphasize the row.
+      if(grid) grid.scrollTop=0;
+      row.classList.add("map-selected");
+      row.scrollIntoView({behavior:"smooth",block:"nearest"});
+      setTimeout(()=>row.classList.remove("map-selected"),2200);
+    }
+  });
+}
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase()}
 function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b>`);if(v.drinks&&v.drinks!=='—')parts.push(`<span>${v.drinks}</span>`);if(v.food&&v.food!=='—')parts.push(`<span>${v.food}</span>`);return parts.slice(0,2).join('')||''}
 function cardHTML(v,full=false){
   const knowledge=venueKnowledgeState(v);
   if(knowledge==='none'){
-    return `<article class="venue-row venue-row-none"><div class="venue-main"><div class="venue-avatar state-avatar none">☹</div><div><h3>${v.name}</h3><p>Verified venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>No current happy hour</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>—</div><div class="venue-cell"><span class="mobile-label">Food deal</span>—</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>No happy-hour special verified</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status no-hh">☹ No happy hour</span></div><div class="venue-link">${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>`:''}</div></article>`;
+    return `<article class="venue-row venue-row-none" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar none">☹</div><div><h3>${v.name}</h3><p>Verified venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>No current happy hour</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>—</div><div class="venue-cell"><span class="mobile-label">Food deal</span>—</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>No happy-hour special verified</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status no-hh">☹ No happy hour</span></div><div class="venue-link">${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>`:''}</div></article>`;
   }
   if(knowledge==='checking'){
-    return `<article class="venue-row venue-row-checking"><div class="venue-main"><div class="venue-avatar state-avatar checking">?</div><div><h3>${v.name}</h3><p>Known venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>Being checked</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>Not verified yet</div><div class="venue-cell"><span class="mobile-label">Food deal</span>Not verified yet</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>Happy-hour details not verified yet</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status checking">? Checking</span></div><div class="venue-link">${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Check ${v.name}">›</a>`:''}</div></article>`;
+    return `<article class="venue-row venue-row-checking" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar checking">?</div><div><h3>${v.name}</h3><p>Known venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>Being checked</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>Not verified yet</div><div class="venue-cell"><span class="mobile-label">Food deal</span>Not verified yet</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>Happy-hour details not verified yet</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status checking">? Checking</span></div><div class="venue-link">${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Check ${v.name}">›</a>`:''}</div></article>`;
   }
-  const s=statusFor(v);return `<article class="venue-row"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
+  const s=statusFor(v);return `<article class="venue-row" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
 function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
 function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')}
 function render(){const list=filtered();const pending=pendingCountForMarket();const verified=completeVenuesForMarket().length;const none=verifiedNoHappyHourForMarket().length;resultCount.textContent=list.length;const meta=resultCount.parentElement;if(meta){meta.querySelectorAll('.pending-check').forEach(el=>el.remove());const span=document.createElement('span');span.className='pending-check';span.textContent=` · ${verified} verified${none?` · ${none} no happy hour`:''}${pending?` · ${pending} being checked`:''}`;meta.appendChild(span)}grid.innerHTML=list.length?listHTML(list,false):'<div class="empty-results">No venues match these filters yet.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div class="empty-results">No venues match these filters yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
@@ -272,10 +309,10 @@ function addVerifiedMarker(v,coords){
   const icon=L.divIcon({className:'venue-map-marker',html:`<div class="venue-map-pin verified-hh" title="Verified happy hour: ${v.name.replace(/"/g,'&quot;')}"><span aria-hidden="true">🙂</span></div>`,iconSize:[34,38],iconAnchor:[17,36],popupAnchor:[0,-31]});
   const popup=`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a></div>`;
   const marker=L.marker([lat,lng],{icon,riseOnHover:true,zIndexOffset:200}).addTo(hhMap).bindPopup(popup,{maxWidth:260});
-  marker.on('click',()=>track('map_venue_click',{market:state.island,venue:v.name,area:areaLabel(v)}));regionMarkers.push(marker);
+  marker.on('click',()=>{track('map_venue_click',{market:state.island,venue:v.name,area:areaLabel(v)});focusVenueFromMap(v)});regionMarkers.push(marker);
 }
-function addNoHappyMarker(v,coords){const [lat,lng]=coords;const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div>`,iconSize:[30,34],iconAnchor:[15,32],popupAnchor:[0,-27]});const marker=L.marker([lat,lng],{icon,zIndexOffset:-50}).addTo(hhMap).bindPopup(`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,{maxWidth:240});regionMarkers.push(marker)}
-function addCheckingMarker(v,coords){const [lat,lng]=coords;const icon=L.divIcon({className:'checking-hh-marker',html:`<div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div>`,iconSize:[18,20],iconAnchor:[9,18],popupAnchor:[0,-15]});const marker=L.marker([lat,lng],{icon,opacity:.48,zIndexOffset:-300}).addTo(hhMap).bindPopup(`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,{maxWidth:250});regionMarkers.push(marker)}
+function addNoHappyMarker(v,coords){const [lat,lng]=coords;const icon=L.divIcon({className:'no-hh-marker',html:`<div class="no-hh-pin" title="Verified: no current happy hour"><span aria-hidden="true">☹</span></div>`,iconSize:[30,34],iconAnchor:[15,32],popupAnchor:[0,-27]});const marker=L.marker([lat,lng],{icon,zIndexOffset:-50}).addTo(hhMap).bindPopup(`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span></div>`,{maxWidth:240});marker.on('click',()=>focusVenueFromMap(v));regionMarkers.push(marker)}
+function addCheckingMarker(v,coords){const [lat,lng]=coords;const icon=L.divIcon({className:'checking-hh-marker',html:`<div class="checking-hh-pin" title="Happy hour still being checked"><span aria-hidden="true">?</span></div>`,iconSize:[18,20],iconAnchor:[9,18],popupAnchor:[0,-15]});const marker=L.marker([lat,lng],{icon,opacity:.48,zIndexOffset:-300}).addTo(hhMap).bindPopup(`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span></div>`,{maxWidth:250});marker.on('click',()=>focusVenueFromMap(v));regionMarkers.push(marker)}
 async function renderMapMarkers(){
   if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];
   const renderToken=Symbol('mapRender');renderMapMarkers.token=renderToken;

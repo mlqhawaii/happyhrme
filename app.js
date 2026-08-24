@@ -640,7 +640,22 @@ window.addEventListener('happyhr:market',e=>{let m=e.detail?.market;const aliase
       });
     }
 
-    const urlMarket = new URL(location.href).searchParams.get('market');
+    const currentUrl = new URL(location.href);
+    let urlMarket = currentUrl.searchParams.get('market');
+
+    // Support old Hawaiʻi links while keeping one canonical market-routing path.
+    if (!urlMarket) {
+      const legacyIsland = currentUrl.searchParams.get('island');
+      const islandAliases = {
+        'Oahu':'honolulu',
+        'Maui':'maui',
+        'Kauai':'kauai',
+        'Hawaii':'hawaii-island'
+      };
+      urlMarket = islandAliases[legacyIsland] || null;
+    }
+
+    // Explicit URL choice always beats a previously saved market (e.g. Denver).
     if (urlMarket && supported[urlMarket]) {
       applyMarket(urlMarket, 'url');
       return;

@@ -275,12 +275,12 @@ function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b
 function cardHTML(v,full=false){
   const knowledge=venueKnowledgeState(v);
   if(knowledge==='none'){
-    return `<article class="venue-row venue-row-none" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar none">☹</div><div><h3>${v.name}</h3><p>Verified venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>No current happy hour</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>—</div><div class="venue-cell"><span class="mobile-label">Food deal</span>—</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>No happy-hour special verified</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status no-hh">☹ No happy hour</span></div><div class="venue-link">${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>`:''}</div></article>`;
+    return `<article class="venue-row venue-row-none" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar none">☹</div><div><h3>${v.name}</h3><p>Verified venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>No current happy hour</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>—</div><div class="venue-cell"><span class="mobile-label">Food deal</span>—</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>No happy-hour special verified</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status no-hh">☹ No happy hour</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button>${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>`:''}</div></article>`;
   }
   if(knowledge==='checking'){
-    return `<article class="venue-row venue-row-checking" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar checking">?</div><div><h3>${v.name}</h3><p>Known venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>Being checked</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>Not verified yet</div><div class="venue-cell"><span class="mobile-label">Food deal</span>Not verified yet</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>Happy-hour details not verified yet</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status checking">? Checking</span></div><div class="venue-link">${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Check ${v.name}">›</a>`:''}</div></article>`;
+    return `<article class="venue-row venue-row-checking" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar checking">?</div><div><h3>${v.name}</h3><p>Known venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>Being checked</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>Not verified yet</div><div class="venue-cell"><span class="mobile-label">Food deal</span>Not verified yet</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>Happy-hour details not verified yet</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status checking">? Checking</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button>${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Check ${v.name}">›</a>`:''}</div></article>`;
   }
-  const s=statusFor(v);return `<article class="venue-row" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
+  const s=statusFor(v);return `<article class="venue-row" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div><h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
 function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
 function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')}
 function render(){const list=filtered();const pending=pendingCountForMarket();const verified=completeVenuesForMarket().length;const none=verifiedNoHappyHourForMarket().length;resultCount.textContent=list.length;const meta=resultCount.parentElement;if(meta){meta.querySelectorAll('.pending-check').forEach(el=>el.remove());const span=document.createElement('span');span.className='pending-check';span.textContent=` · ${verified} verified${none?` · ${none} no happy hour`:''}${pending?` · ${pending} being checked`:''}`;meta.appendChild(span)}grid.innerHTML=list.length?listHTML(list,false):'<div class="empty-results">No venues match these filters yet.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div class="empty-results">No venues match these filters yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
@@ -450,7 +450,7 @@ function markerPresentation(v,status,coords,pinId){
     return {
       className:'happyhr-marker-icon',
       visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></a>`,
-      popup:`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}</div></div>`,
+      popup:`<div class="venue-map-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:200,
       opacity:1
     };
@@ -459,7 +459,7 @@ function markerPresentation(v,status,coords,pinId){
     return {
       className:'happyhr-marker-icon',
       visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></a>`,
-      popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}</div></div>`,
+      popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:-50,
       opacity:1
     };
@@ -467,7 +467,7 @@ function markerPresentation(v,status,coords,pinId){
   return {
     className:'happyhr-marker-icon checking-marker',
     visual:`<a class="happyhr-pin-link checking-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="checking-hh-pin" aria-hidden="true"><span>?</span></span></a>`,
-    popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}</div></div>`,
+    popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
     z:-300,
     opacity:.48
   };
@@ -888,3 +888,64 @@ function initContactForm(){
 
 
 try{initContactForm()}catch(e){console.warn(e)}
+
+
+// Venue owner claim + paid-plan funnel
+(function(){
+  const modal=document.getElementById('claimModal');
+  const form=document.getElementById('claimForm');
+  if(!modal||!form)return;
+  const status=document.getElementById('claimStatus');
+  const checkout=document.getElementById('claimCheckout');
+  const venueName=document.getElementById('claimVenueName');
+  const venueKey=document.getElementById('claimVenueKey');
+  const area=document.getElementById('claimArea');
+  const market=document.getElementById('claimMarket');
+  const plan=document.getElementById('claimPlan');
+  function selectedPlan(){return new URLSearchParams(location.search).get('plan')||'free'}
+  function openClaim(data={}){
+    const cfg=islandConfigs[state.island]||{};
+    venueName.value=data.name||''; venueKey.value=data.key||''; area.value=data.area||'';
+    market.value=cfg.label||state.island||''; plan.value=['free','pro','featured'].includes(data.plan)?data.plan:selectedPlan();
+    status.textContent='';checkout.hidden=true;checkout.removeAttribute('href');
+    modal.classList.add('open');modal.setAttribute('aria-hidden','false');
+    setTimeout(()=>venueName.focus(),40);
+    track('owner_claim_open',{venue:venueName.value,market:market.value,plan:plan.value});
+  }
+  function closeClaim(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true')}
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-claim-venue]');
+    if(b){openClaim({name:b.dataset.claimVenue,key:b.dataset.claimKey,area:b.dataset.claimArea});return}
+    const p=e.target.closest('[data-popup-claim]');
+    if(p){openClaim({name:p.dataset.popupClaim,key:p.dataset.popupClaimKey,area:p.dataset.popupClaimArea});return}
+    if(e.target.closest('[data-claim-close]'))closeClaim();
+  });
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const fd=new FormData(form);
+    const payload={
+      submission_type:'claim',venue_key:String(fd.get('venue_key')||''),venue_name:String(fd.get('venue_name')||''),
+      market:String(fd.get('market')||''),area:String(fd.get('area')||''),address:null,details:String(fd.get('details')||''),
+      source_url:String(fd.get('source_url')||''),submitter_contact:String(fd.get('submitter_contact')||''),
+      owner_name:String(fd.get('owner_name')||''),owner_role:String(fd.get('owner_role')||''),owner_phone:String(fd.get('owner_phone')||''),
+      plan_requested:String(fd.get('plan_requested')||'free'),plan_status:'lead',status:'pending'
+    };
+    status.textContent='Submitting claim…';checkout.hidden=true;
+    try{
+      const r=await fetch(`${SUPABASE_URL}/rest/v1/happy_hour_submissions`,{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(payload)});
+      const rows=await r.json().catch(()=>[]);
+      if(!r.ok)throw new Error(rows?.message||`Claim failed (${r.status})`);
+      const claimId=Array.isArray(rows)&&rows[0]?.id?rows[0].id:'';
+      track('owner_claim_submit',{venue:payload.venue_name,market:payload.market,plan:payload.plan_requested});
+      if(payload.plan_requested==='free'){status.textContent='Claim received. We’ll verify ownership before marking the venue as claimed.';return}
+      status.textContent='Claim received. Preparing secure subscription checkout…';
+      const cr=await fetch('/api/create-owner-checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:payload.plan_requested,email:payload.submitter_contact,venue_name:payload.venue_name,claim_id:claimId})});
+      const cx=await cr.json().catch(()=>({}));
+      if(cr.ok&&cx.url){checkout.href=cx.url;checkout.hidden=false;status.textContent='Claim received. Continue to secure Stripe checkout when ready.';return}
+      status.textContent='Claim received. Subscription checkout is not live yet; we’ll verify your claim first and can activate the plan afterward.';
+    }catch(err){console.warn(err);status.textContent='Could not submit this claim yet. Make sure the owner-claims Supabase migration has been run.'}
+  });
+  const qp=new URLSearchParams(location.search);
+  if(qp.get('claim')==='1')setTimeout(()=>openClaim({plan:qp.get('plan')||'free'}),250);
+  if(qp.get('owner_checkout')==='success')setTimeout(()=>{status.textContent='Payment received. We’ll finish venue-owner verification before activating paid placement.';openClaim({plan:qp.get('plan')||'pro'})},250);
+})();

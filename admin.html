@@ -22,7 +22,7 @@ button{cursor:pointer}.card{background:#fff;border:1px solid var(--line);border-
 .notes{width:100%;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.enrich-box{display:none;margin-top:14px;padding:14px;border:1px solid #cfe0dc;background:#f7fbfa;border-radius:12px}.enrich-box.open{display:block}.enrich-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.enrich-box label{display:grid;gap:5px;font-size:11px;font-weight:800;text-transform:uppercase;color:var(--muted)}.enrich-box input,.enrich-box textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);text-transform:none;font-weight:500}.evidence{font-size:12px;line-height:1.45;color:var(--muted);background:#fff;padding:9px;border-radius:8px;margin-top:9px}.confidence{font-size:11px;font-weight:800;color:var(--teal);margin-top:7px}
 .empty{text-align:center;padding:50px;color:var(--muted)}#adminView[hidden],#loginView[hidden]{display:none!important}
 @media(max-width:700px){.grid{grid-template-columns:1fr}.item-head,.top{align-items:flex-start;flex-direction:column}}
-</style>
+.claim-plan,.claim-plan-status{border:1px solid #cad8d6;border-radius:9px;padding:9px 10px;background:#fff;font-weight:700}</style>
 </head>
 <body>
 <div id="loginView" class="wrap login card">
@@ -76,7 +76,7 @@ const count=document.getElementById('count');
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmtDate(s){try{return new Date(s).toLocaleString()}catch{return s||''}}
-function labelType(t){return ({new_venue:'New venue',correction:'Correction',contact:'Contact'})[t]||t}
+function labelType(t){return ({new_venue:'New venue',correction:'Correction',contact:'Contact',claim:'Venue claim'})[t]||t}
 
 async function checkSession(){
   const r=await fetch('/api/admin-session',{cache:'no-store'});
@@ -118,12 +118,13 @@ async function loadQueue(){
       <div class="grid">
         ${row.address?`<div class="field"><strong>Address</strong>${esc(row.address)}</div>`:''}
         ${row.submitter_contact?`<div class="field"><strong>Contact</strong><a href="mailto:${encodeURIComponent(row.submitter_contact)}">${esc(row.submitter_contact)}</a></div>`:''}
+        ${row.submission_type==='claim'?`<div class="field"><strong>Owner</strong>${esc(row.owner_name||'')} ${row.owner_role?'· '+esc(row.owner_role):''}</div><div class="field"><strong>Phone</strong>${esc(row.owner_phone||'—')}</div><div class="field"><strong>Requested plan</strong>${esc(row.plan_requested||'free')}</div><div class="field"><strong>Plan status</strong>${esc(row.plan_status||'lead')}</div>`:''}
         ${row.source_url?`<div class="field"><strong>Source</strong><a href="${esc(row.source_url)}" target="_blank" rel="noopener">Open source ↗</a></div>`:''}
       </div>
       <div class="details">${esc(row.details)}</div>
       <textarea class="notes" placeholder="Private admin notes…">${esc(row.admin_notes||'')}</textarea>
       <div class="actions">
-        ${row.submission_type!=='contact'?`<button class="btn" data-enrich>Verify & enrich</button>`:''}
+        ${row.submission_type==='claim'?`<select class="claim-plan"><option value="free" ${row.plan_requested==='free'?'selected':''}>Free</option><option value="pro" ${row.plan_requested==='pro'?'selected':''}>Pro $49</option><option value="featured" ${row.plan_requested==='featured'?'selected':''}>Featured $99</option></select><select class="claim-plan-status"><option value="lead" ${row.plan_status==='lead'?'selected':''}>Lead</option><option value="approved" ${row.plan_status==='approved'?'selected':''}>Approved</option><option value="checkout_started" ${row.plan_status==='checkout_started'?'selected':''}>Checkout started</option><option value="active" ${row.plan_status==='active'?'selected':''}>Active</option><option value="past_due" ${row.plan_status==='past_due'?'selected':''}>Past due</option><option value="canceled" ${row.plan_status==='canceled'?'selected':''}>Canceled</option></select><button class="btn" data-save-claim>Save plan</button>`:(row.submission_type!=='contact'?`<button class="btn" data-enrich>Verify & enrich</button>`:'')}
         <button class="btn secondary" data-status="reviewed">Approve / reviewed</button>
         <button class="btn" data-status="applied">Mark applied</button>
         <button class="btn danger" data-status="rejected">Reject</button>
@@ -135,6 +136,12 @@ async function loadQueue(){
 }
 
 queue.addEventListener('click',async e=>{
+  const saveClaim=e.target.closest('[data-save-claim]');
+  if(saveClaim){
+    const item=saveClaim.closest('.item');saveClaim.disabled=true;
+    const r=await fetch('/api/admin-update-submission',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:Number(item.dataset.id),status:'reviewed',admin_notes:item.querySelector('.notes').value,plan_requested:item.querySelector('.claim-plan').value,plan_status:item.querySelector('.claim-plan-status').value})});
+    saveClaim.disabled=false;if(r.ok)loadQueue();else alert('Could not save claim plan.');return;
+  }
   const enrichBtn=e.target.closest('[data-enrich]');
   if(enrichBtn){
     const item=enrichBtn.closest('.item'), box=item.querySelector('.enrich-box');

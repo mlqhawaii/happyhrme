@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   const type = String(req.query.type || 'all');
 
   const filters = [
-    'select=id,submission_type,venue_name,market,area,address,details,source_url,submitter_contact,status,admin_notes,created_at',
+    'select=id,submission_type,venue_name,market,area,address,details,source_url,submitter_contact,status,admin_notes,created_at,venue_key,owner_name,owner_role,owner_phone,plan_requested,plan_status',
     'order=created_at.desc',
     'limit=250'
   ];

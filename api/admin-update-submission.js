@@ -2,6 +2,8 @@ import { isAdmin } from '../lib/admin-auth.js';
 import { supabaseAdminFetch } from '../lib/supabase-admin.js';
 
 const ALLOWED = new Set(['pending','reviewed','applied','rejected']);
+const PLAN_ALLOWED = new Set(['free','pro','featured']);
+const PLAN_STATUS_ALLOWED = new Set(['lead','approved','checkout_started','active','past_due','canceled']);
 
 export default async function handler(req, res) {
   if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -17,6 +19,8 @@ export default async function handler(req, res) {
   const id = Number(body.id);
   const status = String(body.status || '');
   const admin_notes = String(body.admin_notes || '').slice(0, 5000);
+  const plan_requested = body.plan_requested == null ? null : String(body.plan_requested);
+  const plan_status = body.plan_status == null ? null : String(body.plan_status);
 
   if (!Number.isFinite(id) || !ALLOWED.has(status)) {
     return res.status(400).json({ error: 'Invalid update' });
@@ -31,7 +35,7 @@ export default async function handler(req, res) {
           'Content-Type': 'application/json',
           Prefer: 'return=representation'
         },
-        body: JSON.stringify({ status, admin_notes })
+        body: JSON.stringify({ status, admin_notes, ...(plan_requested && PLAN_ALLOWED.has(plan_requested) ? {plan_requested} : {}), ...(plan_status && PLAN_STATUS_ALLOWED.has(plan_status) ? {plan_status} : {}) })
       }
     );
     const text = await r.text();

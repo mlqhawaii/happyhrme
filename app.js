@@ -340,7 +340,7 @@ let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
 let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
-function markerCacheKey(v){return `happyhr:geo:v9:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+function markerCacheKey(v){return `happyhr:geo:v10:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 
 function normalizeGeoText(x){
   return String(x||"").toLowerCase()
@@ -439,6 +439,47 @@ function coordsPassVenueSanity(v,coords){
   return true;
 }
 
+
+function stableVenueHash(text){
+  let h=2166136261;
+  const s=String(text||'');
+  for(let i=0;i<s.length;i++){
+    h^=s.charCodeAt(i);
+    h=Math.imul(h,16777619);
+  }
+  return h>>>0;
+}
+
+function approximateVenueCoords(v){
+  const cfg=islandConfigs[state.island]||{};
+  const region=expectedRegionForVenue(v);
+  const base=region ? [Number(region.lat),Number(region.long)] :
+    Array.isArray(cfg.center) ? [Number(cfg.center[0]),Number(cfg.center[1])] : null;
+  if(!base||!base.every(Number.isFinite))return null;
+
+  // Spread fallback pins deterministically around the correct neighborhood /
+  // market center so missing geocodes do not stack on one coordinate.
+  const h=stableVenueHash(`${v.id||''}|${v.name||''}|${v.area||''}|${state.island}`);
+  const angle=((h%360)*Math.PI)/180;
+  const fraction=((h>>>8)%1000)/1000;
+
+  // Neighborhood fallbacks stay close to the neighborhood center. Mainland
+  // markets without sub-regions use a slightly wider city-level spread.
+  const radiusKm=region ? (0.55 + fraction*1.35) : (1.2 + fraction*3.8);
+  const dLat=(radiusKm/111)*Math.sin(angle);
+  const cosLat=Math.max(.35,Math.cos(base[0]*Math.PI/180));
+  const dLng=(radiusKm/(111*cosLat))*Math.cos(angle);
+  const candidate=[base[0]+dLat,base[1]+dLng];
+
+  // Keep approximate fallback inside the configured market bounds.
+  if(Array.isArray(cfg.bounds)){
+    const [[south,west],[north,east]]=cfg.bounds;
+    candidate[0]=Math.min(north-.002,Math.max(south+.002,candidate[0]));
+    candidate[1]=Math.min(east-.002,Math.max(west+.002,candidate[1]));
+  }
+  return candidate;
+}
+
 function expectedSearchExtent(v){
   const cfg=islandConfigs[state.island]||{};
   const region=expectedRegionForVenue(v);
@@ -490,56 +531,81 @@ function venueLookupQuery(v){
   const cfg=islandConfigs[state.island]||{};
   const stateCode=MARKET_STATE_CODES[state.island]||normalizedStateCode(v.state)||'';
   const address=String(v.address||'').trim();
-  if(address)return {query:address,minScore:82,mode:'address'};
+  if(address)return {query:address,minScore:72,mode:'address'};
 
   const locationParts=[v.area||v.neighborhood||'',v.city||'',cfg.label||'',stateCode,"USA"]
     .map(x=>String(x||'').trim()).filter(Boolean);
   const query=[String(v.name||'').trim(),...locationParts].filter(Boolean).join(', ');
-  return query?{query,minScore:92,mode:'venue-name'}:null;
+  return query?{query,minScore:82,mode:'venue-name'}:null;
+}
+
+async function runArcgisVenueLookup(v,lookup,extent,useExtent=true){
+  const params=new URLSearchParams({
+    f:'json',
+    maxLocations:'8',
+    outFields:'Match_addr,Addr_type,PlaceName,Type',
+    SingleLine:lookup.query,
+    sourceCountry:'USA'
+  });
+  if(useExtent&&extent){
+    params.set('searchExtent',`${extent.west},${extent.south},${extent.east},${extent.north}`);
+    params.set('location',`${extent.center[1]},${extent.center[0]}`);
+  }
+  const url=`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${params.toString()}`;
+  const r=await fetch(url,{headers:{Accept:'application/json'}});
+  if(!r.ok)return null;
+  const j=await r.json();
+  const candidates=Array.isArray(j?.candidates)?j.candidates:[];
+  for(const c of candidates){
+    if(!c?.location)continue;
+    const score=Number(c.score||0);
+    if(score<lookup.minScore)continue;
+    const coords=[Number(c.location.y),Number(c.location.x)];
+    if(!coordsPassVenueSanity(v,coords))continue;
+    return {coords,score,match:c.address||'',mode:lookup.mode};
+  }
+  return null;
 }
 
 async function geocodeVenue(v){
-  const direct=cachedVenueCoords(v);if(direct)return direct;
-  const lookup=venueLookupQuery(v);if(!lookup)return null;
+  const direct=cachedVenueCoords(v);
+  if(direct)return direct;
+
+  const lookup=venueLookupQuery(v);
+  if(!lookup)return null;
   const extent=expectedSearchExtent(v);
+
   try{
-    const params=new URLSearchParams({
-      f:'json',
-      maxLocations:'5',
-      outFields:'Match_addr,Addr_type,PlaceName,Type',
-      SingleLine:lookup.query,
-      sourceCountry:'USA'
-    });
-    if(extent){
-      params.set('searchExtent',`${extent.west},${extent.south},${extent.east},${extent.north}`);
-      params.set('location',`${extent.center[1]},${extent.center[0]}`);
-    }
-    const url=`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${params.toString()}`;
-    const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok)return null;
-    const j=await r.json();
-    const candidates=Array.isArray(j?.candidates)?j.candidates:[];
-    for(const c of candidates){
-      if(!c?.location)continue;
-      const score=Number(c.score||0);if(score<lookup.minScore)continue;
-      const coords=[Number(c.location.y),Number(c.location.x)];
-      if(!coordsPassVenueSanity(v,coords))continue;
-      try{
-        localStorage.setItem(markerCacheKey(v),JSON.stringify({
-          lat:coords[0],lng:coords[1],at:Date.now(),score,
-          mode:lookup.mode,match:c.address||''
-        }));
-      }catch(e){}
-      return coords;
+    // First attempt: neighborhood-biased lookup.
+    let hit=await runArcgisVenueLookup(v,lookup,extent,true);
+
+    // Second attempt: broader market lookup. This recovers real venues that
+    // ArcGIS scores below the stricter local attempt while still requiring
+    // the result to pass our market/area sanity test.
+    if(!hit){
+      const broader={
+        ...lookup,
+        minScore: lookup.mode==='address' ? 65 : 74,
+        mode:`${lookup.mode}-broad`
+      };
+      hit=await runArcgisVenueLookup(v,broader,extent,false);
     }
 
-    // Safety rule: a missing pin is better than a confidently wrong pin.
-    console.warn('HappyHr map suppressed an untrusted venue location',v.name,lookup.query);
-    return null;
+    if(!hit)return null;
+
+    try{
+      localStorage.setItem(markerCacheKey(v),JSON.stringify({
+        lat:hit.coords[0],lng:hit.coords[1],at:Date.now(),
+        score:hit.score,mode:hit.mode,match:hit.match
+      }));
+    }catch(e){}
+    return hit.coords;
   }catch(e){
     console.warn('HappyHr venue geocoding failed',v.name,e);
     return null;
   }
 }
+
 function nearestVenueMarkerFromContainerPoint(point,maxDistance=28){
   if(!hhMap||!point)return null;
   let best=null;
@@ -742,37 +808,62 @@ function addVerifiedMarker(v,coords){return createVenueMarker(v,coords,'verified
 function addNoHappyMarker(v,coords){return createVenueMarker(v,coords,'none')}
 function addCheckingMarker(v,coords){return createVenueMarker(v,coords,'checking')}
 async function renderMapMarkers(){
-  if(!hhMap||!window.L)return;for(const bucket of overlapPinBuckets.values())for(const entry of bucket){if(entry.leg){try{hhMap.removeLayer(entry.leg)}catch(e){}}}regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];mapPinRegistry.clear();overlapPinBuckets=new Map();
-  const renderToken=Symbol('mapRender');renderMapMarkers.token=renderToken;
+  if(!hhMap||!window.L)return;
+  for(const bucket of overlapPinBuckets.values())for(const entry of bucket){
+    if(entry.leg){try{hhMap.removeLayer(entry.leg)}catch(e){}}
+  }
+  regionMarkers.forEach(m=>{try{hhMap.removeLayer(m)}catch(e){}});
+  regionMarkers=[];
+  mapPinRegistry.clear();
+  overlapPinBuckets=new Map();
+
+  const renderToken=Symbol('mapRender');
+  renderMapMarkers.token=renderToken;
+
   const groups=[
     [completeVenuesForMarket(),addVerifiedMarker],
     [verifiedNoHappyHourForMarket(),addNoHappyMarker],
     [pendingVenuesForMarket(),addCheckingMarker]
   ];
-  // Draw already-known/cached coordinates instantly. A malformed record must
-  // never stop every other venue from rendering.
-  const missing=[];
+
+  const unresolved=[];
+
+  // Every listing gets a marker immediately. Trusted coordinates are used
+  // directly; otherwise a deterministic neighborhood/city fallback is used.
   groups.forEach(([list,adder])=>list.forEach(v=>{
     try{
-      const c=cachedVenueCoords(v);
-      if(c)adder(v,c);
-      else missing.push([v,adder]);
+      const exact=cachedVenueCoords(v);
+      if(exact){
+        adder(v,exact);
+        return;
+      }
+      const fallback=approximateVenueCoords(v);
+      const fallbackMarker=fallback?adder(v,fallback):null;
+      unresolved.push([v,adder,fallbackMarker]);
     }catch(e){
-      console.warn('HappyHr skipped bad immediate marker data for',v?.name,e);
-      missing.push([v,adder]);
+      console.warn('HappyHr could not create immediate marker for',v?.name,e);
+      unresolved.push([v,adder,null]);
     }
   }));
 
-  // Resolve missing / rejected coordinates one venue at a time.
-  for(const [v,adder] of missing){
+  // Upgrade approximate pins to exact geocoded coordinates in the background.
+  // A failed lookup leaves the fallback marker in the correct neighborhood
+  // instead of hiding the venue.
+  for(const [v,adder,fallbackMarker] of unresolved){
     if(renderMapMarkers.token!==renderToken)return;
     try{
-      const c=await geocodeVenue(v);
-      if(c&&renderMapMarkers.token===renderToken)adder(v,c);
+      const exact=await geocodeVenue(v);
+      if(exact&&renderMapMarkers.token===renderToken){
+        if(fallbackMarker){
+          try{hhMap.removeLayer(fallbackMarker)}catch(e){}
+        }
+        adder(v,exact);
+      }
     }catch(e){
-      console.warn('HappyHr skipped one venue marker instead of stopping the map',v?.name,e);
+      console.warn('HappyHr kept approximate marker for',v?.name,e);
     }
-    await new Promise(r=>setTimeout(r,55));
+    // Small stagger avoids hammering the public geocoder.
+    await new Promise(r=>setTimeout(r,35));
   }
 }
 

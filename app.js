@@ -472,10 +472,32 @@ function markerPresentation(v,status,coords,pinId){
     opacity:.48
   };
 }
-function createVenueMarker(v,coords,status){
+let overlapPinBuckets=new Map();
+function displayCoordsForOverlappingPin(coords){
   const [lat,lng]=coords;
+  // Bucket venues within roughly 8–10 m together. This catches restaurants
+  // sharing a mall, hotel, resort, food hall, or the same geocoded address.
+  const key=`${lat.toFixed(4)},${lng.toFixed(4)}`;
+  const index=overlapPinBuckets.get(key)||0;
+  overlapPinBuckets.set(key,index+1);
+  if(index===0)return [lat,lng];
+
+  // Fan subsequent pins around the true location in a compact ring.
+  // 0.000055° latitude is about 6 m; longitude is corrected for latitude.
+  const ring=Math.floor((index-1)/6);
+  const slot=(index-1)%6;
+  const radiusMeters=7+(ring*5);
+  const angle=(Math.PI*2*slot/6)+(ring*Math.PI/6);
+  const dLat=(radiusMeters*Math.cos(angle))/111320;
+  const lonScale=Math.max(0.2,Math.cos(lat*Math.PI/180));
+  const dLng=(radiusMeters*Math.sin(angle))/(111320*lonScale);
+  return [lat+dLat,lng+dLng];
+}
+function createVenueMarker(v,coords,status){
+  const trueCoords=coords;
+  const [lat,lng]=displayCoordsForOverlappingPin(coords);
   const pinId=`pin-${++mapPinSequence}`;
-  const p=markerPresentation(v,status,coords,pinId);
+  const p=markerPresentation(v,status,trueCoords,pinId);
   // Keep the interactive box close to the visible marker. Oversized hitboxes
   // overlap neighboring pins and can steal clicks from one another.
   const icon=L.divIcon({
@@ -505,7 +527,7 @@ function addVerifiedMarker(v,coords){return createVenueMarker(v,coords,'verified
 function addNoHappyMarker(v,coords){return createVenueMarker(v,coords,'none')}
 function addCheckingMarker(v,coords){return createVenueMarker(v,coords,'checking')}
 async function renderMapMarkers(){
-  if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];mapPinRegistry.clear();
+  if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];mapPinRegistry.clear();overlapPinBuckets=new Map();
   const renderToken=Symbol('mapRender');renderMapMarkers.token=renderToken;
   const groups=[
     [completeVenuesForMarket(),addVerifiedMarker],

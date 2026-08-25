@@ -93,6 +93,10 @@ function curatedVenueAddress(row){
   const key=String(row?.venue_name||"").trim().toLowerCase();
   return String(row?.address||CURATED_VENUE_ADDRESSES[key]||"").trim();
 }
+function hasCuratedVenueAddress(v){
+  const key=String(v?.name||v?.venue_name||"").trim().toLowerCase();
+  return Boolean(String(v?.address||"").trim() || CURATED_VENUE_ADDRESSES[key]);
+}
 function rowToVenue(row){return {
   id:row.id,name:row.venue_name,island:normalizeIsland(row.island),city:row.city||"",market:row.market||"",metroSlug:row.metro_slug||"",state:row.state||"",country:row.country||"US",
   neighborhood:row.neighborhood||row.area||"",area:row.area||row.neighborhood||"",
@@ -336,7 +340,7 @@ let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
 let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
-function markerCacheKey(v){return `happyhr:geo:v8:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+function markerCacheKey(v){return `happyhr:geo:v9:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 
 function normalizeGeoText(x){
   return String(x||"").toLowerCase()
@@ -458,16 +462,17 @@ function expectedSearchExtent(v){
 }
 
 function cachedVenueCoords(v){
-  const curated=curatedVenueCoords(v);
-  if(curated&&coordsPassVenueSanity(v,curated))return curated;
-
-  // Imported coordinates are accepted only if they pass BOTH market and area sanity.
-  if(!hasCuratedVenueAddress(v)&&Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)){
-    const imported=[v.latitude,v.longitude];
-    if(coordsPassVenueSanity(v,imported))return imported;
-  }
-
   try{
+    const curated=curatedVenueCoords(v);
+    if(curated&&coordsPassVenueSanity(v,curated))return curated;
+
+    // Stored database coordinates remain the fastest source, but only when
+    // plausible for both the market and the venue's stated area.
+    if(Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)){
+      const imported=[v.latitude,v.longitude];
+      if(coordsPassVenueSanity(v,imported))return imported;
+    }
+
     const raw=localStorage.getItem(markerCacheKey(v));if(!raw)return null;
     const x=JSON.parse(raw),candidate=[Number(x?.lat),Number(x?.lng)];
     if(!coordsPassVenueSanity(v,candidate)){
@@ -475,7 +480,10 @@ function cachedVenueCoords(v){
       return null;
     }
     return candidate;
-  }catch(e){return null}
+  }catch(e){
+    console.warn('HappyHr ignored bad cached coordinates for',v?.name,e);
+    return null;
+  }
 }
 
 function venueLookupQuery(v){
@@ -741,15 +749,30 @@ async function renderMapMarkers(){
     [verifiedNoHappyHourForMarket(),addNoHappyMarker],
     [pendingVenuesForMarket(),addCheckingMarker]
   ];
-  // Draw already-known/cached coordinates instantly.
+  // Draw already-known/cached coordinates instantly. A malformed record must
+  // never stop every other venue from rendering.
   const missing=[];
-  groups.forEach(([list,adder])=>list.forEach(v=>{const c=cachedVenueCoords(v);if(c)adder(v,c);else missing.push([v,adder])}));
-  // Any market can contain legacy/incomplete records without stored coordinates.
-  // Resolve them through the same strict global lookup path and cache successful results.
+  groups.forEach(([list,adder])=>list.forEach(v=>{
+    try{
+      const c=cachedVenueCoords(v);
+      if(c)adder(v,c);
+      else missing.push([v,adder]);
+    }catch(e){
+      console.warn('HappyHr skipped bad immediate marker data for',v?.name,e);
+      missing.push([v,adder]);
+    }
+  }));
+
+  // Resolve missing / rejected coordinates one venue at a time.
   for(const [v,adder] of missing){
     if(renderMapMarkers.token!==renderToken)return;
-    const c=await geocodeVenue(v);if(c&&renderMapMarkers.token===renderToken)adder(v,c);
-    await new Promise(r=>setTimeout(r,80));
+    try{
+      const c=await geocodeVenue(v);
+      if(c&&renderMapMarkers.token===renderToken)adder(v,c);
+    }catch(e){
+      console.warn('HappyHr skipped one venue marker instead of stopping the map',v?.name,e);
+    }
+    await new Promise(r=>setTimeout(r,55));
   }
 }
 

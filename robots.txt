@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://happyhr.me/sitemap.xml
+Sitemap: https://www.happyhr.me/sitemap.xml

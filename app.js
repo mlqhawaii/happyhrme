@@ -473,33 +473,52 @@ function markerPresentation(v,status,coords,pinId){
   };
 }
 let overlapPinBuckets=new Map();
-function displayCoordsForOverlappingPin(coords){
+function overlapBucketKey(coords){
   const [lat,lng]=coords;
-  // Bucket venues within roughly 8–10 m together. This catches restaurants
-  // sharing a mall, hotel, resort, food hall, or the same geocoded address.
-  const key=`${lat.toFixed(4)},${lng.toFixed(4)}`;
-  const index=overlapPinBuckets.get(key)||0;
-  overlapPinBuckets.set(key,index+1);
-  if(index===0)return [lat,lng];
-
-  // Fan subsequent pins around the true location in a compact ring.
-  // 0.000055° latitude is about 6 m; longitude is corrected for latitude.
-  const ring=Math.floor((index-1)/6);
-  const slot=(index-1)%6;
-  const radiusMeters=18+(ring*8);
-  const angle=(Math.PI*2*slot/6)+(ring*Math.PI/6);
+  // Group venues that resolve to the same building / essentially the same point.
+  return `${lat.toFixed(4)},${lng.toFixed(4)}`;
+}
+function overlapOffsetCoords(trueCoords,index,total){
+  const [lat,lng]=trueCoords;
+  if(total<=1)return [lat,lng];
+  // True spider layout: every pin moves away from the shared real location,
+  // spaced symmetrically around it so none is hidden behind another.
+  const radiusMeters=total===2?34:Math.min(46,30+total*2.5);
+  const angle=(-Math.PI/2)+(Math.PI*2*index/total);
   const dLat=(radiusMeters*Math.cos(angle))/111320;
   const lonScale=Math.max(0.2,Math.cos(lat*Math.PI/180));
   const dLng=(radiusMeters*Math.sin(angle))/(111320*lonScale);
   return [lat+dLat,lng+dLng];
 }
+function reflowOverlapBucket(key){
+  const bucket=overlapPinBuckets.get(key)||[];
+  const total=bucket.length;
+  bucket.forEach((entry,index)=>{
+    const display=overlapOffsetCoords(entry.trueCoords,index,total);
+    entry.marker.setLatLng(display);
+    if(entry.leg){
+      try{hhMap.removeLayer(entry.leg)}catch(e){}
+      entry.leg=null;
+    }
+    if(total>1){
+      // Connector line makes it clear these visually separated pins belong to
+      // the same real-world building/location.
+      entry.leg=L.polyline([entry.trueCoords,display],{
+        color:'#315f68',
+        weight:1.5,
+        opacity:.58,
+        dashArray:'3 4',
+        interactive:false,
+        bubblingMouseEvents:false
+      }).addTo(hhMap);
+      try{entry.leg.bringToBack()}catch(e){}
+    }
+  });
+}
 function createVenueMarker(v,coords,status){
   const trueCoords=coords;
-  const [lat,lng]=displayCoordsForOverlappingPin(coords);
   const pinId=`pin-${++mapPinSequence}`;
   const p=markerPresentation(v,status,trueCoords,pinId);
-  // Keep the interactive box close to the visible marker. Oversized hitboxes
-  // overlap neighboring pins and can steal clicks from one another.
   const icon=L.divIcon({
     className:p.className,
     html:p.visual,
@@ -507,7 +526,9 @@ function createVenueMarker(v,coords,status){
     iconAnchor:[21,43],
     popupAnchor:[0,-36]
   });
-  const marker=L.marker([lat,lng],{
+  // Marker is first created at the true coordinate, then the whole overlap
+  // bucket is reflowed symmetrically whenever another venue joins it.
+  const marker=L.marker(trueCoords,{
     icon,
     riseOnHover:status==='verified',
     zIndexOffset:p.z,
@@ -518,16 +539,31 @@ function createVenueMarker(v,coords,status){
   }).bindPopup(p.popup,{maxWidth:260});
   wireVenueMarker(marker,v);
   mapPinRegistry.set(pinId,{marker,venue:v});
-  marker.on('remove',()=>mapPinRegistry.delete(pinId));
   marker.addTo(hhMap);
   regionMarkers.push(marker);
+
+  const key=overlapBucketKey(trueCoords);
+  const bucket=overlapPinBuckets.get(key)||[];
+  const bucketEntry={marker,venue:v,trueCoords:[...trueCoords],leg:null};
+  bucket.push(bucketEntry);
+  overlapPinBuckets.set(key,bucket);
+  reflowOverlapBucket(key);
+
+  marker.on('remove',()=>{
+    mapPinRegistry.delete(pinId);
+    if(bucketEntry.leg){try{hhMap.removeLayer(bucketEntry.leg)}catch(e){}}
+    const current=overlapPinBuckets.get(key)||[];
+    const next=current.filter(x=>x!==bucketEntry);
+    if(next.length){overlapPinBuckets.set(key,next);reflowOverlapBucket(key)}
+    else overlapPinBuckets.delete(key);
+  });
   return marker;
 }
 function addVerifiedMarker(v,coords){return createVenueMarker(v,coords,'verified')}
 function addNoHappyMarker(v,coords){return createVenueMarker(v,coords,'none')}
 function addCheckingMarker(v,coords){return createVenueMarker(v,coords,'checking')}
 async function renderMapMarkers(){
-  if(!hhMap||!window.L)return;regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];mapPinRegistry.clear();overlapPinBuckets=new Map();
+  if(!hhMap||!window.L)return;for(const bucket of overlapPinBuckets.values())for(const entry of bucket){if(entry.leg){try{hhMap.removeLayer(entry.leg)}catch(e){}}}regionMarkers.forEach(m=>hhMap.removeLayer(m));regionMarkers=[];mapPinRegistry.clear();overlapPinBuckets=new Map();
   const renderToken=Symbol('mapRender');renderMapMarkers.token=renderToken;
   const groups=[
     [completeVenuesForMarket(),addVerifiedMarker],

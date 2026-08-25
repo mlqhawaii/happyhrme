@@ -486,7 +486,7 @@ function displayCoordsForOverlappingPin(coords){
   // 0.000055° latitude is about 6 m; longitude is corrected for latitude.
   const ring=Math.floor((index-1)/6);
   const slot=(index-1)%6;
-  const radiusMeters=7+(ring*5);
+  const radiusMeters=18+(ring*8);
   const angle=(Math.PI*2*slot/6)+(ring*Math.PI/6);
   const dLat=(radiusMeters*Math.cos(angle))/111320;
   const lonScale=Math.max(0.2,Math.cos(lat*Math.PI/180));
@@ -512,8 +512,8 @@ function createVenueMarker(v,coords,status){
     riseOnHover:status==='verified',
     zIndexOffset:p.z,
     opacity:p.opacity,
-    interactive:false,
-    keyboard:false,
+    interactive:true,
+    keyboard:true,
     bubblingMouseEvents:false
   }).bindPopup(p.popup,{maxWidth:260});
   wireVenueMarker(marker,v);

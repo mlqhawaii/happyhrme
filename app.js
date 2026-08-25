@@ -73,6 +73,16 @@ function normalizeIsland(value){
   if(raw==="hawaii" || raw==="hawaii island" || raw==="big island") return "Hawaii";
   return value;
 }
+const CURATED_VENUE_COORDS={
+  // Verified business/property coordinates. These override imported/geocoder data.
+  "dixie grill bbq & crab shack":[21.3783436,-157.9351654],
+  "lost + found at wayfinder":[21.278807,-157.823260]
+};
+function curatedVenueCoords(v){
+  const key=String(v?.name||v?.venue_name||"").trim().toLowerCase();
+  const c=CURATED_VENUE_COORDS[key];
+  return Array.isArray(c)&&c.length===2?[Number(c[0]),Number(c[1])]:null;
+}
 const CURATED_VENUE_ADDRESSES={
   "jackie rey's ohana grill hilo":"64 Keawe St, Hilo, HI 96720",
   "don's mai tai bar & restaurant":"75-5852 Alii Dr, Kailua-Kona, HI 96740",
@@ -326,71 +336,201 @@ let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
 let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
-function markerCacheKey(v){return `happyhr:geo:v4:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
-function cachedVenueCoords(v){
-  if(Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)) return [v.latitude,v.longitude];
-  // Reuse coordinates the site already resolved successfully in earlier builds.
-  // We stopped making NEW weak name/neighborhood guesses, but throwing away the
-  // old successful map cache made older markets such as Oahu lose most pins.
-  const slug=String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-');
-  const keys=[
-    markerCacheKey(v),
-    `happyhr:geo:v2:${slug}:${state.island}`,
-    `happyhr:geo:${slug}:${state.island}`
-  ];
-  const cfg=islandConfigs[state.island]||{};
-  for(const key of keys){
-    try{
-      const raw=localStorage.getItem(key);if(!raw)continue;
-      const x=JSON.parse(raw),lat=Number(x?.lat),lng=Number(x?.lng);
-      if(!Number.isFinite(lat)||!Number.isFinite(lng))continue;
-      if(Array.isArray(cfg.bounds)){
-        const [[south,west],[north,east]]=cfg.bounds;
-        if(lat<south||lat>north||lng<west||lng>east)continue;
-      }
-      // Promote a valid legacy result into the current cache version.
-      try{localStorage.setItem(markerCacheKey(v),JSON.stringify({lat,lng,at:Date.now(),legacy:true}))}catch(e){}
-      return [lat,lng];
-    }catch(e){}
+function markerCacheKey(v){return `happyhr:geo:v8:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+
+function normalizeGeoText(x){
+  return String(x||"").toLowerCase()
+    .replace(/[ʻ’']/g,"'")
+    .replace(/ā/g,"a").replace(/ē/g,"e").replace(/ī/g,"i").replace(/ō/g,"o").replace(/ū/g,"u")
+    .replace(/[^a-z0-9]+/g," ").trim();
+}
+
+const AREA_REGION_ALIASES={
+  Oahu:[
+    {region:"Waikiki",words:["waikiki","waikīkī","ala wai","harbor"]},
+    {region:"Ala Moana",words:["ala moana","kapiolani","kapiʻolani"]},
+    {region:"Kakaako",words:["kakaako","kakaʻako"]},
+    {region:"Central",words:["aiea","aiea","pearl city","pearl harbor","moanalua"]},
+    {region:"North Shore",words:["haleiwa","haleʻiwa","north shore","waialua","pupukea","sunset beach"]},
+    {region:"Windward",words:["kailua","kaneohe","kāneʻohe","windward"]},
+    {region:"West Oahu",words:["kapolei","ko olina","ewa","ʻe​wa","west oahu"]},
+    {region:"East Honolulu",words:["kahala","kāhala","kaimuki","kaimukī","waialae","hawaii kai","east honolulu"]}
+  ],
+  Maui:[
+    {region:"Wailea",words:["wailea","makena","mākena"]},
+    {region:"Kihei",words:["kihei","kīhei"]},
+    {region:"Kahului",words:["kahului","wailuku"]},
+    {region:"Kaanapali",words:["kaanapali","kāʻanapali"]},
+    {region:"Lahaina",words:["lahaina","lāhainā","kahana","napili"]},
+    {region:"Paia",words:["paia","pāʻia","upcountry","makawao"]}
+  ],
+  Kauai:[
+    {region:"Poipu",words:["poipu","poʻipū","koloa","kōloa"]},
+    {region:"Lihue",words:["lihue","līhuʻe"]},
+    {region:"Kapaa",words:["kapaa","kapaʻa"]},
+    {region:"Hanalei",words:["hanalei","princeville","north shore"]},
+    {region:"Port Allen",words:["port allen","waimea","hanapepe"]}
+  ],
+  Hawaii:[
+    {region:"Kona",words:["kona","kailua-kona","kailua kona"]},
+    {region:"Waikoloa",words:["waikoloa","kohala"]},
+    {region:"Hilo",words:["hilo"]},
+    {region:"Puna",words:["puna","pahoa","pāhoa"]}
+  ]
+};
+
+function expectedRegionForVenue(v){
+  const cfg=islandConfigs[state.island];
+  if(!cfg)return null;
+  const areaText=normalizeGeoText(`${v.area||""} ${v.neighborhood||""} ${v.city||""} ${v.address||""}`);
+  const aliases=AREA_REGION_ALIASES[state.island]||[];
+  for(const entry of aliases){
+    if(entry.words.some(w=>areaText.includes(normalizeGeoText(w)))){
+      return (cfg.regions||[]).find(r=>r.key===entry.region)||null;
+    }
+  }
+  // One-region mainland markets: use the market itself as the sanity region.
+  const realRegions=(cfg.regions||[]).filter(r=>r.key!=="__market__");
+  if(!realRegions.length){
+    const marketRegion=(cfg.regions||[]).find(r=>r.key==="__market__");
+    if(marketRegion)return marketRegion;
   }
   return null;
 }
+
+function geoDistanceKm(a,b){
+  if(!a||!b)return Infinity;
+  const [lat1,lon1]=a.map(Number),[lat2,lon2]=b.map(Number);
+  if(![lat1,lon1,lat2,lon2].every(Number.isFinite))return Infinity;
+  const R=6371, p=Math.PI/180;
+  const dLat=(lat2-lat1)*p,dLon=(lon2-lon1)*p;
+  const s=Math.sin(dLat/2)**2+Math.cos(lat1*p)*Math.cos(lat2*p)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+
+function regionRadiusKm(region){
+  if(!region)return Infinity;
+  const z=Number(region.zoom||11);
+  if(z>=14)return 4.5;
+  if(z===13)return 6.5;
+  if(z===12)return 10;
+  if(z===11)return 18;
+  return 35;
+}
+
+function coordsPassVenueSanity(v,coords){
+  if(!Array.isArray(coords)||coords.length!==2)return false;
+  const lat=Number(coords[0]),lng=Number(coords[1]);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng))return false;
+  const cfg=islandConfigs[state.island]||{};
+  if(Array.isArray(cfg.bounds)){
+    const [[south,west],[north,east]]=cfg.bounds;
+    if(lat<south||lat>north||lng<west||lng>east)return false;
+  }
+  const region=expectedRegionForVenue(v);
+  if(region){
+    const d=geoDistanceKm([lat,lng],[region.lat,region.long]);
+    if(d>regionRadiusKm(region))return false;
+  }
+  return true;
+}
+
+function expectedSearchExtent(v){
+  const cfg=islandConfigs[state.island]||{};
+  const region=expectedRegionForVenue(v);
+  if(region){
+    const radius=regionRadiusKm(region);
+    const latPad=Math.max(.025,radius/111);
+    const lonPad=Math.max(.03,radius/(111*Math.max(.35,Math.cos(Number(region.lat)*Math.PI/180))));
+    return {
+      west:Number(region.long)-lonPad,
+      south:Number(region.lat)-latPad,
+      east:Number(region.long)+lonPad,
+      north:Number(region.lat)+latPad,
+      center:[Number(region.lat),Number(region.long)]
+    };
+  }
+  if(Array.isArray(cfg.bounds)){
+    const [[south,west],[north,east]]=cfg.bounds;
+    return {west,south,east,north,center:[(south+north)/2,(west+east)/2]};
+  }
+  return null;
+}
+
+function cachedVenueCoords(v){
+  const curated=curatedVenueCoords(v);
+  if(curated&&coordsPassVenueSanity(v,curated))return curated;
+
+  // Imported coordinates are accepted only if they pass BOTH market and area sanity.
+  if(!hasCuratedVenueAddress(v)&&Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)){
+    const imported=[v.latitude,v.longitude];
+    if(coordsPassVenueSanity(v,imported))return imported;
+  }
+
+  try{
+    const raw=localStorage.getItem(markerCacheKey(v));if(!raw)return null;
+    const x=JSON.parse(raw),candidate=[Number(x?.lat),Number(x?.lng)];
+    if(!coordsPassVenueSanity(v,candidate)){
+      localStorage.removeItem(markerCacheKey(v));
+      return null;
+    }
+    return candidate;
+  }catch(e){return null}
+}
+
 function venueLookupQuery(v){
   const cfg=islandConfigs[state.island]||{};
   const stateCode=MARKET_STATE_CODES[state.island]||normalizedStateCode(v.state)||'';
   const address=String(v.address||'').trim();
-  if(address)return {query:address,minScore:80,mode:'address'};
+  if(address)return {query:address,minScore:82,mode:'address'};
 
-  // Global fallback for legacy/incomplete records: resolve the *named venue* in its
-  // city/area, rather than dropping it from the map. This is deliberately strict:
-  // only a high-confidence candidate inside the selected market bounds is accepted.
-  const locationParts=[v.area||v.neighborhood||'',v.city||'',cfg.label||'',stateCode]
+  const locationParts=[v.area||v.neighborhood||'',v.city||'',cfg.label||'',stateCode,"USA"]
     .map(x=>String(x||'').trim()).filter(Boolean);
   const query=[String(v.name||'').trim(),...locationParts].filter(Boolean).join(', ');
-  return query?{query,minScore:90,mode:'venue-name'}:null;
+  return query?{query,minScore:92,mode:'venue-name'}:null;
 }
+
 async function geocodeVenue(v){
   const direct=cachedVenueCoords(v);if(direct)return direct;
-  const cfg=islandConfigs[state.island]||{};
   const lookup=venueLookupQuery(v);if(!lookup)return null;
+  const extent=expectedSearchExtent(v);
   try{
-    const url=`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=3&outFields=Match_addr,Addr_type,PlaceName,Type&SingleLine=${encodeURIComponent(lookup.query)}`;
+    const params=new URLSearchParams({
+      f:'json',
+      maxLocations:'5',
+      outFields:'Match_addr,Addr_type,PlaceName,Type',
+      SingleLine:lookup.query,
+      sourceCountry:'USA'
+    });
+    if(extent){
+      params.set('searchExtent',`${extent.west},${extent.south},${extent.east},${extent.north}`);
+      params.set('location',`${extent.center[1]},${extent.center[0]}`);
+    }
+    const url=`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${params.toString()}`;
     const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok)return null;
     const j=await r.json();
     const candidates=Array.isArray(j?.candidates)?j.candidates:[];
     for(const c of candidates){
       if(!c?.location)continue;
       const score=Number(c.score||0);if(score<lookup.minScore)continue;
-      const lat=Number(c.location.y),lng=Number(c.location.x);if(!Number.isFinite(lat)||!Number.isFinite(lng))continue;
-      if(Array.isArray(cfg.bounds)){
-        const [[s,w],[n,e]]=cfg.bounds;
-        if(lat<s||lat>n||lng<w||lng>e)continue;
-      }
-      try{localStorage.setItem(markerCacheKey(v),JSON.stringify({lat,lng,at:Date.now(),score,mode:lookup.mode,match:c.address||''}))}catch(e){}
-      return [lat,lng];
+      const coords=[Number(c.location.y),Number(c.location.x)];
+      if(!coordsPassVenueSanity(v,coords))continue;
+      try{
+        localStorage.setItem(markerCacheKey(v),JSON.stringify({
+          lat:coords[0],lng:coords[1],at:Date.now(),score,
+          mode:lookup.mode,match:c.address||''
+        }));
+      }catch(e){}
+      return coords;
     }
+
+    // Safety rule: a missing pin is better than a confidently wrong pin.
+    console.warn('HappyHr map suppressed an untrusted venue location',v.name,lookup.query);
     return null;
-  }catch(e){return null}
+  }catch(e){
+    console.warn('HappyHr venue geocoding failed',v.name,e);
+    return null;
+  }
 }
 function nearestVenueMarkerFromContainerPoint(point,maxDistance=28){
   if(!hhMap||!point)return null;

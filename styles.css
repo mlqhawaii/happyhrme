@@ -447,3 +447,37 @@
 @media(max-width:760px){
   .footer-links{width:100%}
 }
+
+
+/* Sponsored map pin redesign: fully distinct from the normal verified pin. */
+.sponsored-marker-icon{
+  z-index:700!important;
+}
+.adult-map-pin.sponsored-map-pin{
+  filter:drop-shadow(0 3px 5px rgba(65,45,8,.42));
+}
+.adult-map-pin.sponsored-map-pin::before{
+  background:#d6a52f!important;
+  border-color:#7d5a12!important;
+  box-shadow:
+    0 0 0 2px rgba(255,245,205,.94),
+    0 3px 7px rgba(44,31,7,.36)!important;
+}
+.adult-map-pin.sponsored-map-pin::after{
+  border-top-color:#d6a52f!important;
+  filter:drop-shadow(0 2px 1px rgba(80,55,9,.32));
+}
+.adult-map-pin.sponsored-map-pin .adult-pin-face{
+  background:#fff9df!important;
+  border-color:#8e6818!important;
+}
+.adult-map-pin.sponsored-map-pin .adult-pin-face i,
+.adult-map-pin.sponsored-map-pin .adult-pin-face b{
+  background:#62480f!important;
+}
+.adult-map-pin.sponsored-map-pin .adult-pin-face em{
+  border-color:#62480f!important;
+}
+.adult-map-pin.sponsored-map-pin:hover{
+  filter:drop-shadow(0 4px 8px rgba(65,45,8,.55));
+}

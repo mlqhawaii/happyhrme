@@ -480,7 +480,7 @@ function markerPresentation(v,status,coords,pinId){
     const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
     return {
       className:`happyhr-marker-icon${v.sponsored?' sponsored-marker-icon':''}`,
-      visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh${v.sponsored?' sponsored-map-pin':''}" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span>${v.sponsored?'<span class="map-sponsored-dot">★</span>':''}</span></a>`,
+      visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh${v.sponsored?' sponsored-map-pin':''}" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></a>`,
       popup:`<div class="venue-map-popup">${v.sponsored?'<span class="popup-sponsored-label">Sponsored</span>':''}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:v.sponsored?360:200,
       opacity:1

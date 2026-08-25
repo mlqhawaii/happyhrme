@@ -50,10 +50,10 @@ const statewideFallbackVenues = [
   {name:"Kauai Island Brewing Company",island:"Kauai",neighborhood:"Port Allen",area:"Port Allen / ʻEleʻele",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"$2 off house beer & house seltzer",food:"$2 off pupus",tags:["brewery","food"],source:"https://kauaiislandbrewing.com/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
   {name:"Brennecke's Beach Broiler",island:"Kauai",neighborhood:"Poipu",area:"Poʻipū",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour drink specials",food:"Happy-hour pupu specials",tags:["views","food"],source:"https://brenneckes.com/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
   {name:"Lava Lava Beach Club Kauai",island:"Kauai",neighborhood:"Kapaa",area:"Kapaʻa",days:"Daily",early:"3:00–5:00 PM",late:"Drinks to 6:00 PM",beer:null,drinks:"$2 off draught beer; happy-hour cocktails",food:"Happy-hour pupus",tags:["beach","food"],source:"https://lavalavabeachclub.com/kauai/",slots:{0:[[15,18]],1:[[15,18]],2:[[15,18]],3:[[15,18]],4:[[15,18]],5:[[15,18]],6:[[15,18]]}},
-  {name:"Jackie Rey's Ohana Grill Hilo",island:"Hawaii",neighborhood:"Hilo",area:"Hilo",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:6,drinks:"$6 draft beer; $7 classics; $9 wine",food:"Happy-hour pupu picks",tags:["food","local"],source:"https://www.jackiereyshilo.com/happy-hour-menu",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
-  {name:"On The Rocks",island:"Hawaii",neighborhood:"Kona",area:"Kailua-Kona",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour cocktails and beer",food:"Happy-hour pupus",tags:["beach","music","food"],source:"https://www.huggosontherocks.com/menu/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
-  {name:"Don's Mai Tai Bar & Restaurant",island:"Hawaii",neighborhood:"Kona",area:"Kailua-Kona",days:"Daily",early:"4:00–6:00 PM",late:"—",beer:null,drinks:"Happy-hour cocktails and drink specials",food:"Happy-hour pupus",tags:["views","cocktails"],source:"https://www.royalkona.com/dining",slots:{0:[[16,18]],1:[[16,18]],2:[[16,18]],3:[[16,18]],4:[[16,18]],5:[[16,18]],6:[[16,18]]}},
-  {name:"Lava Lava Beach Club Waikoloa",island:"Hawaii",neighborhood:"Waikoloa",area:"Waikōloa",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour tropical drinks and beer",food:"Happy-hour pupus",tags:["beach","food"],source:"https://lavalavabeachclub.com/bigisland/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}}
+  {name:"Jackie Rey's Ohana Grill Hilo",island:"Hawaii",neighborhood:"Hilo",area:"Hilo",address:"64 Keawe St, Hilo, HI 96720",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:6,drinks:"$6 draft beer; $7 classics; $9 wine",food:"Happy-hour pupu picks",tags:["food","local"],source:"https://www.jackiereyshilo.com/happy-hour-menu",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"On The Rocks",island:"Hawaii",neighborhood:"Kona",area:"Kailua-Kona",address:"75-5824 Kahakai Rd, Kailua-Kona, HI 96740",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour cocktails and beer",food:"Happy-hour pupus",tags:["beach","music","food"],source:"https://www.huggosontherocks.com/menu/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}},
+  {name:"Don's Mai Tai Bar & Restaurant",island:"Hawaii",neighborhood:"Kona",area:"Kailua-Kona",address:"75-5852 Alii Dr, Kailua-Kona, HI 96740",days:"Daily",early:"4:00–6:00 PM",late:"—",beer:null,drinks:"Happy-hour cocktails and drink specials",food:"Happy-hour pupus",tags:["views","cocktails"],source:"https://www.royalkona.com/dining",slots:{0:[[16,18]],1:[[16,18]],2:[[16,18]],3:[[16,18]],4:[[16,18]],5:[[16,18]],6:[[16,18]]}},
+  {name:"Lava Lava Beach Club Waikoloa",island:"Hawaii",neighborhood:"Waikoloa",area:"Waikōloa",address:"69-1081 Kuualii Pl, Waikoloa, HI 96738",days:"Daily",early:"3:00–5:00 PM",late:"—",beer:null,drinks:"Happy-hour tropical drinks and beer",food:"Happy-hour pupus",tags:["beach","food"],source:"https://lavalavabeachclub.com/bigisland/",slots:{0:[[15,17]],1:[[15,17]],2:[[15,17]],3:[[15,17]],4:[[15,17]],5:[[15,17]],6:[[15,17]]}}
 ];
 
 
@@ -73,10 +73,20 @@ function normalizeIsland(value){
   if(raw==="hawaii" || raw==="hawaii island" || raw==="big island") return "Hawaii";
   return value;
 }
+const CURATED_VENUE_ADDRESSES={
+  "jackie rey's ohana grill hilo":"64 Keawe St, Hilo, HI 96720",
+  "don's mai tai bar & restaurant":"75-5852 Alii Dr, Kailua-Kona, HI 96740",
+  "on the rocks":"75-5824 Kahakai Rd, Kailua-Kona, HI 96740",
+  "lava lava beach club waikoloa":"69-1081 Kuualii Pl, Waikoloa, HI 96738"
+};
+function curatedVenueAddress(row){
+  const key=String(row?.venue_name||"").trim().toLowerCase();
+  return String(row?.address||CURATED_VENUE_ADDRESSES[key]||"").trim();
+}
 function rowToVenue(row){return {
   id:row.id,name:row.venue_name,island:normalizeIsland(row.island),city:row.city||"",market:row.market||"",metroSlug:row.metro_slug||"",state:row.state||"",country:row.country||"US",
   neighborhood:row.neighborhood||row.area||"",area:row.area||row.neighborhood||"",
-  address:row.address||"",latitude:row.latitude==null?null:Number(row.latitude),longitude:row.longitude==null?null:Number(row.longitude),
+  address:curatedVenueAddress(row),latitude:row.latitude==null?null:Number(row.latitude),longitude:row.longitude==null?null:Number(row.longitude),
   days:row.days||"Confirm hours",early:row.early_display||"Confirm current hours",late:row.late_display||"—",
   beer:row.cheapest_beer==null?null:Number(row.cheapest_beer),drinks:row.drink_highlight||"—",food:row.food_highlight||"—",dealHighlights:row.deal_highlights||"",
   verification:row.verification||"",noHappyHour:row.no_happy_hour===true||row.verification==="verified_no_happy_hour",
@@ -285,7 +295,7 @@ let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
 let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
-function markerCacheKey(v){return `happyhr:geo:v3:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+function markerCacheKey(v){return `happyhr:geo:v4:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 function cachedVenueCoords(v){
   if(Number.isFinite(v.latitude)&&Number.isFinite(v.longitude)) return [v.latitude,v.longitude];
   // Reuse coordinates the site already resolved successfully in earlier builds.
@@ -314,23 +324,41 @@ function cachedVenueCoords(v){
   }
   return null;
 }
+function venueLookupQuery(v){
+  const cfg=islandConfigs[state.island]||{};
+  const stateCode=MARKET_STATE_CODES[state.island]||normalizedStateCode(v.state)||'';
+  const address=String(v.address||'').trim();
+  if(address)return {query:address,minScore:80,mode:'address'};
+
+  // Global fallback for legacy/incomplete records: resolve the *named venue* in its
+  // city/area, rather than dropping it from the map. This is deliberately strict:
+  // only a high-confidence candidate inside the selected market bounds is accepted.
+  const locationParts=[v.area||v.neighborhood||'',v.city||'',cfg.label||'',stateCode]
+    .map(x=>String(x||'').trim()).filter(Boolean);
+  const query=[String(v.name||'').trim(),...locationParts].filter(Boolean).join(', ');
+  return query?{query,minScore:90,mode:'venue-name'}:null;
+}
 async function geocodeVenue(v){
   const direct=cachedVenueCoords(v);if(direct)return direct;
   const cfg=islandConfigs[state.island]||{};
-  const marketLabel=cfg.label||state.island;
-  // Accuracy first: never invent a map location from only venue name/neighborhood.
-  // If we do not have a real street address, leave the venue off the map until enriched.
-  const query=String(v.address||"").trim();
-  if(!query)return null;
+  const lookup=venueLookupQuery(v);if(!lookup)return null;
   try{
-    const url=`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=1&outFields=Match_addr,Addr_type&SingleLine=${encodeURIComponent(query)}`;
+    const url=`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=3&outFields=Match_addr,Addr_type,PlaceName,Type&SingleLine=${encodeURIComponent(lookup.query)}`;
     const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok)return null;
-    const j=await r.json();const c=j?.candidates?.[0];if(!c?.location)return null;
-    const lat=Number(c.location.y),lng=Number(c.location.x);if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;
-    // Reject a geocode that lands outside the selected market's map bounds.
-    if(Array.isArray(cfg.bounds)){const [[s,w],[n,e]]=cfg.bounds;if(lat<s||lat>n||lng<w||lng>e)return null}
-    try{localStorage.setItem(markerCacheKey(v),JSON.stringify({lat,lng,at:Date.now()}))}catch(e){}
-    return [lat,lng];
+    const j=await r.json();
+    const candidates=Array.isArray(j?.candidates)?j.candidates:[];
+    for(const c of candidates){
+      if(!c?.location)continue;
+      const score=Number(c.score||0);if(score<lookup.minScore)continue;
+      const lat=Number(c.location.y),lng=Number(c.location.x);if(!Number.isFinite(lat)||!Number.isFinite(lng))continue;
+      if(Array.isArray(cfg.bounds)){
+        const [[s,w],[n,e]]=cfg.bounds;
+        if(lat<s||lat>n||lng<w||lng>e)continue;
+      }
+      try{localStorage.setItem(markerCacheKey(v),JSON.stringify({lat,lng,at:Date.now(),score,mode:lookup.mode,match:c.address||''}))}catch(e){}
+      return [lat,lng];
+    }
+    return null;
   }catch(e){return null}
 }
 function nearestVenueMarkerFromContainerPoint(point,maxDistance=28){
@@ -487,8 +515,8 @@ async function renderMapMarkers(){
   // Draw already-known/cached coordinates instantly.
   const missing=[];
   groups.forEach(([list,adder])=>list.forEach(v=>{const c=cachedVenueCoords(v);if(c)adder(v,c);else missing.push([v,adder])}));
-  // Older Hawaiʻi records often predate stored coordinates. Geocode those records
-  // from their address/name and cache the result, so subsequent map loads are instant.
+  // Any market can contain legacy/incomplete records without stored coordinates.
+  // Resolve them through the same strict global lookup path and cache successful results.
   for(const [v,adder] of missing){
     if(renderMapMarkers.token!==renderToken)return;
     const c=await geocodeVenue(v);if(c&&renderMapMarkers.token===renderToken)adder(v,c);

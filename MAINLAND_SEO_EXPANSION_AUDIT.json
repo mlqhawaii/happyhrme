@@ -1,0 +1,140 @@
+{
+  "cities_expanded": 22,
+  "new_neighborhood_pages": 88,
+  "national_hub": "/us-happy-hour-guides",
+  "sitemap_urls": 155,
+  "pages_by_city": {
+    "Atlanta": [
+      "Midtown",
+      "Buckhead",
+      "Old Fourth Ward",
+      "Inman Park"
+    ],
+    "Austin": [
+      "Downtown",
+      "East Austin",
+      "South Congress",
+      "Rainey Street"
+    ],
+    "Boston": [
+      "Back Bay",
+      "Seaport",
+      "South End",
+      "Downtown"
+    ],
+    "Chicago": [
+      "River North",
+      "West Loop",
+      "Loop",
+      "Wicker Park"
+    ],
+    "Dallas": [
+      "Uptown",
+      "Deep Ellum",
+      "Bishop Arts",
+      "Downtown"
+    ],
+    "Denver": [
+      "LoDo",
+      "RiNo",
+      "Capitol Hill",
+      "Highlands"
+    ],
+    "Houston": [
+      "Montrose",
+      "Midtown",
+      "Downtown",
+      "Heights"
+    ],
+    "Las Vegas": [
+      "The Strip",
+      "Downtown",
+      "Arts District",
+      "Summerlin"
+    ],
+    "Los Angeles": [
+      "Downtown LA",
+      "Hollywood",
+      "West Hollywood",
+      "Silver Lake"
+    ],
+    "Miami": [
+      "Brickell",
+      "Wynwood",
+      "Downtown",
+      "South Beach"
+    ],
+    "Nashville": [
+      "Downtown",
+      "The Gulch",
+      "Midtown",
+      "East Nashville"
+    ],
+    "New Orleans": [
+      "French Quarter",
+      "Warehouse District",
+      "CBD",
+      "Marigny"
+    ],
+    "New York": [
+      "Midtown",
+      "East Village",
+      "Lower East Side",
+      "Financial District"
+    ],
+    "Philadelphia": [
+      "Center City",
+      "Rittenhouse",
+      "Old City",
+      "Fishtown"
+    ],
+    "Phoenix": [
+      "Downtown Phoenix",
+      "Roosevelt Row",
+      "Arcadia",
+      "Biltmore"
+    ],
+    "Portland": [
+      "Pearl District",
+      "Alberta Arts",
+      "Hawthorne",
+      "Downtown"
+    ],
+    "San Antonio": [
+      "River Walk",
+      "Pearl District",
+      "Southtown",
+      "Downtown"
+    ],
+    "San Diego": [
+      "Gaslamp Quarter",
+      "Little Italy",
+      "North Park",
+      "Pacific Beach"
+    ],
+    "San Francisco": [
+      "SoMa",
+      "Financial District",
+      "Union Square",
+      "Mission District"
+    ],
+    "Seattle": [
+      "Capitol Hill",
+      "Belltown",
+      "Downtown",
+      "Pioneer Square"
+    ],
+    "Tampa": [
+      "Downtown",
+      "Hyde Park",
+      "SoHo",
+      "Ybor City"
+    ],
+    "Washington DC": [
+      "Dupont Circle",
+      "Logan Circle",
+      "Shaw",
+      "Navy Yard"
+    ]
+  }
+}

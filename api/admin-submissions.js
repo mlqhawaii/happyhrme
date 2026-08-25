@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   const type = String(req.query.type || 'all');
 
   const filters = [
-    'select=id,submission_type,venue_name,market,area,address,details,source_url,submitter_contact,status,admin_notes,created_at,venue_key,owner_name,owner_role,owner_phone,plan_requested,plan_status',
+    'select=id,submission_type,venue_name,market,area,address,details,source_url,submitter_contact,status,admin_notes,created_at,venue_key,owner_name,owner_role,owner_phone,plan_requested,plan_status,stripe_customer_id,stripe_subscription_id,stripe_current_period_end',
     'order=created_at.desc',
     'limit=250'
   ];
@@ -20,8 +20,18 @@ export default async function handler(req, res) {
     const r = await supabaseAdminFetch(`happy_hour_submissions?${filters.join('&')}`);
     const text = await r.text();
     if (!r.ok) return res.status(r.status).send(text);
+
+    let rows = [];
+    try { rows = JSON.parse(text); } catch { rows = []; }
+
+    const stripeMode = String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_')
+      ? 'test'
+      : 'live';
+
+    rows = rows.map(row => ({ ...row, stripe_mode: stripeMode }));
+
     res.setHeader('Cache-Control', 'no-store');
-    res.status(200).send(text);
+    res.status(200).json(rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

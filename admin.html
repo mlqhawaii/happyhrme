@@ -22,7 +22,11 @@ button{cursor:pointer}.card{background:#fff;border:1px solid var(--line);border-
 .notes{width:100%;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.enrich-box{display:none;margin-top:14px;padding:14px;border:1px solid #cfe0dc;background:#f7fbfa;border-radius:12px}.enrich-box.open{display:block}.enrich-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.enrich-box label{display:grid;gap:5px;font-size:11px;font-weight:800;text-transform:uppercase;color:var(--muted)}.enrich-box input,.enrich-box textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);text-transform:none;font-weight:500}.evidence{font-size:12px;line-height:1.45;color:var(--muted);background:#fff;padding:9px;border-radius:8px;margin-top:9px}.confidence{font-size:11px;font-weight:800;color:var(--teal);margin-top:7px}
 .empty{text-align:center;padding:50px;color:var(--muted)}#adminView[hidden],#loginView[hidden]{display:none!important}
 @media(max-width:700px){.grid{grid-template-columns:1fr}.item-head,.top{align-items:flex-start;flex-direction:column}}
-.claim-plan,.claim-plan-status{border:1px solid #cad8d6;border-radius:9px;padding:9px 10px;background:#fff;font-weight:700}</style>
+.claim-plan,.claim-plan-status{border:1px solid #cad8d6;border-radius:9px;padding:9px 10px;background:#fff;font-weight:700}
+.stripe-id{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;overflow-wrap:anywhere}
+.stripe-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.stripe-actions a{display:inline-block;text-decoration:none}
+</style>
 </head>
 <body>
 <div id="loginView" class="wrap login card">
@@ -57,6 +61,7 @@ button{cursor:pointer}.card{background:#fff;border:1px solid var(--line);border-
         <option value="new_venue">New venues</option>
         <option value="correction">Corrections</option>
         <option value="contact">Contact messages</option>
+        <option value="claim">Venue claims</option>
       </select>
     </label>
     <button id="refreshBtn" class="btn secondary">Refresh</button>
@@ -76,6 +81,13 @@ const count=document.getElementById('count');
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmtDate(s){try{return new Date(s).toLocaleString()}catch{return s||''}}
+function fmtRenewal(s){
+  if(!s)return '—';
+  try{
+    return new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(s));
+  }catch{return s}
+}
+function stripeBase(mode){return mode==='test'?'https://dashboard.stripe.com/test':'https://dashboard.stripe.com'}
 function labelType(t){return ({new_venue:'New venue',correction:'Correction',contact:'Contact',claim:'Venue claim'})[t]||t}
 
 async function checkSession(){
@@ -118,7 +130,19 @@ async function loadQueue(){
       <div class="grid">
         ${row.address?`<div class="field"><strong>Address</strong>${esc(row.address)}</div>`:''}
         ${row.submitter_contact?`<div class="field"><strong>Contact</strong><a href="mailto:${encodeURIComponent(row.submitter_contact)}">${esc(row.submitter_contact)}</a></div>`:''}
-        ${row.submission_type==='claim'?`<div class="field"><strong>Owner</strong>${esc(row.owner_name||'')} ${row.owner_role?'· '+esc(row.owner_role):''}</div><div class="field"><strong>Phone</strong>${esc(row.owner_phone||'—')}</div><div class="field"><strong>Requested plan</strong>${esc(row.plan_requested||'free')}</div><div class="field"><strong>Plan status</strong>${esc(row.plan_status||'lead')}</div>`:''}
+        ${row.submission_type==='claim'?`
+          <div class="field"><strong>Owner</strong>${esc(row.owner_name||'')} ${row.owner_role?'· '+esc(row.owner_role):''}</div>
+          <div class="field"><strong>Phone</strong>${esc(row.owner_phone||'—')}</div>
+          <div class="field"><strong>Requested plan</strong>${esc(row.plan_requested||'free')}</div>
+          <div class="field"><strong>Plan status</strong>${esc(row.plan_status||'lead')}</div>
+          <div class="field"><strong>Next renewal</strong>${esc(fmtRenewal(row.stripe_current_period_end))}</div>
+          <div class="field"><strong>Stripe customer</strong><span class="stripe-id">${esc(row.stripe_customer_id||'—')}</span></div>
+          <div class="field"><strong>Stripe subscription</strong><span class="stripe-id">${esc(row.stripe_subscription_id||'—')}</span></div>
+          ${(row.stripe_customer_id||row.stripe_subscription_id)?`<div class="field" style="grid-column:1/-1"><strong>Stripe</strong><div class="stripe-actions">
+            ${row.stripe_subscription_id?`<a class="btn secondary" target="_blank" rel="noopener" href="${stripeBase(row.stripe_mode)}/subscriptions/${encodeURIComponent(row.stripe_subscription_id)}">Open subscription in Stripe ↗</a>`:''}
+            ${row.stripe_customer_id?`<a class="btn secondary" target="_blank" rel="noopener" href="${stripeBase(row.stripe_mode)}/customers/${encodeURIComponent(row.stripe_customer_id)}">Open customer in Stripe ↗</a>`:''}
+          </div></div>`:''}
+        `:''}
         ${row.source_url?`<div class="field"><strong>Source</strong><a href="${esc(row.source_url)}" target="_blank" rel="noopener">Open source ↗</a></div>`:''}
       </div>
       <div class="details">${esc(row.details)}</div>

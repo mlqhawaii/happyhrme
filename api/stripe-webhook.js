@@ -136,14 +136,18 @@ export default async function handler(req, res) {
         event.type === 'customer.subscription.updated') {
       await patchClaimBySubscription(obj.id, {
         plan_status: stripeStatusToPlanStatus(obj.status),
-        stripe_customer_id: typeof obj.customer === 'string' ? obj.customer : obj.customer?.id || null
+        stripe_customer_id: typeof obj.customer === 'string' ? obj.customer : obj.customer?.id || null,
+        stripe_current_period_end: obj.current_period_end
+          ? new Date(obj.current_period_end * 1000).toISOString()
+          : null
       });
     }
 
     if (event.type === 'customer.subscription.deleted') {
       await patchClaimBySubscription(obj.id, {
         plan_status: 'canceled',
-        stripe_customer_id: typeof obj.customer === 'string' ? obj.customer : obj.customer?.id || null
+        stripe_customer_id: typeof obj.customer === 'string' ? obj.customer : obj.customer?.id || null,
+        stripe_current_period_end: null
       });
     }
 

@@ -943,7 +943,7 @@ try{initContactForm()}catch(e){console.warn(e)}
       const cx=await cr.json().catch(()=>({}));
       if(cr.ok&&cx.url){checkout.href=cx.url;checkout.hidden=false;status.textContent='Claim received. Continue to secure Stripe checkout when ready.';return}
       status.textContent='Claim received. Subscription checkout is not live yet; we’ll verify your claim first and can activate the plan afterward.';
-    }catch(err){console.warn(err);status.textContent=`Could not submit claim: ${err?.message||'unknown error'}`}
+    }catch(err){console.warn(err);checkout.hidden=true;checkout.removeAttribute('href');status.textContent=`Could not submit claim: ${err?.message||'unknown error'}`}
   });
   const qp=new URLSearchParams(location.search);
   if(qp.get('claim')==='1')setTimeout(()=>openClaim({plan:qp.get('plan')||'free'}),250);

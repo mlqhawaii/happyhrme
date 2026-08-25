@@ -1,0 +1,32 @@
+HappyHr.Me Stripe Webhook Setup
+
+Added endpoint:
+  https://happyhr.me/api/stripe-webhook
+
+Events handled:
+  checkout.session.completed
+  customer.subscription.created
+  customer.subscription.updated
+  customer.subscription.deleted
+  invoice.paid
+  invoice.payment_failed
+
+The webhook updates happy_hour_submissions:
+  plan_status
+  stripe_customer_id
+  stripe_subscription_id
+
+After deploying:
+1. In Stripe SANDBOX/Test mode, create a webhook/event destination pointing to:
+     https://happyhr.me/api/stripe-webhook
+2. Subscribe to the six events listed above.
+3. Copy the endpoint signing secret (starts whsec_...)
+4. Add it to Vercel Production as:
+     STRIPE_WEBHOOK_SECRET
+5. Redeploy after adding the variable.
+6. Send a Stripe test event or run another test checkout.
+
+Important:
+- A sandbox webhook secret only validates sandbox events.
+- When switching to live Stripe later, create a LIVE webhook endpoint too
+  and replace the Vercel Stripe variables with the live keys/price IDs/webhook secret.

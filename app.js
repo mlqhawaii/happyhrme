@@ -932,10 +932,10 @@ try{initContactForm()}catch(e){console.warn(e)}
     };
     status.textContent='Submitting claim…';checkout.hidden=true;
     try{
-      const r=await fetch(`${SUPABASE_URL}/rest/v1/happy_hour_submissions`,{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(payload)});
-      const rows=await r.json().catch(()=>[]);
-      if(!r.ok)throw new Error(rows?.message||`Claim failed (${r.status})`);
-      const claimId=Array.isArray(rows)&&rows[0]?.id?rows[0].id:'';
+      const r=await fetch('/api/submit-owner-claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const result=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(result?.error||`Claim failed (${r.status})`);
+      const claimId=result?.claim?.id||'';
       track('owner_claim_submit',{venue:payload.venue_name,market:payload.market,plan:payload.plan_requested});
       if(payload.plan_requested==='free'){status.textContent='Claim received. We’ll verify ownership before marking the venue as claimed.';return}
       status.textContent='Claim received. Preparing secure subscription checkout…';
@@ -943,7 +943,7 @@ try{initContactForm()}catch(e){console.warn(e)}
       const cx=await cr.json().catch(()=>({}));
       if(cr.ok&&cx.url){checkout.href=cx.url;checkout.hidden=false;status.textContent='Claim received. Continue to secure Stripe checkout when ready.';return}
       status.textContent='Claim received. Subscription checkout is not live yet; we’ll verify your claim first and can activate the plan afterward.';
-    }catch(err){console.warn(err);status.textContent='Could not submit this claim yet. Make sure the owner-claims Supabase migration has been run.'}
+    }catch(err){console.warn(err);status.textContent=`Could not submit claim: ${err?.message||'unknown error'}`}
   });
   const qp=new URLSearchParams(location.search);
   if(qp.get('claim')==='1')setTimeout(()=>openClaim({plan:qp.get('plan')||'free'}),250);

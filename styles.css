@@ -546,3 +546,10 @@
 }
 
 .seo-guide-hub{padding:54px 0;background:#f7fbfb;border-top:1px solid #e0eaeb}.seo-guide-hub h2{font:800 34px/1.1 Manrope,sans-serif;margin:6px 0 8px;color:#102b3a}.seo-guide-hub p{color:#5a707a;max-width:700px}.seo-guide-grid{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}.seo-guide-grid a{padding:9px 12px;border:1px solid #d7e5e6;border-radius:999px;background:#fff;color:#08716f;text-decoration:none;font-weight:800;font-size:13px}.seo-guide-grid a:hover{border-color:#87c6c2}.seo-detail{margin:32px 0}.seo-detail h2{font:800 28px/1.15 Manrope,sans-serif;color:#102b3a;margin:28px 0 10px}.seo-detail ul{color:#536771;line-height:1.7;padding-left:22px}.seo-breadcrumbs{font-size:13px;color:#6d818a;margin-bottom:24px}.seo-breadcrumbs a{color:#08716f;text-decoration:none}.seo-note{background:#f4f8f8;border:1px solid #dce8e8;border-radius:14px;padding:17px 18px;margin:24px 0;color:#435d69}.seo-live-link{font-weight:800;color:#08716f}.seo-related{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.seo-related a{padding:7px 10px;border:1px solid #dfe8ea;border-radius:999px;color:#08716f;text-decoration:none;font-weight:700;font-size:13px}
+
+/* Global map status update: unverified/unknown venues use the same visible sad-face
+   family as known no-happy-hour venues. Question-mark pins are no longer rendered. */
+.adult-map-pin.unverified-venue-pin{
+  opacity:1!important;
+  filter:none;
+}

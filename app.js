@@ -710,11 +710,11 @@ function markerPresentation(v,status,coords,pinId){
     };
   }
   return {
-    className:'happyhr-marker-icon checking-marker',
-    visual:`<a class="happyhr-pin-link checking-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="checking-hh-pin" aria-hidden="true"><span>?</span></span></a>`,
-    popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour being checked</b><span>We know this venue; current happy-hour details are not verified yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
-    z:-300,
-    opacity:.48
+    className:'happyhr-marker-icon',
+    visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult unverified-venue-pin" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></a>`,
+    popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour not verified</b><span>This venue is in our dataset, but we have not confirmed a current happy hour yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
+    z:-50,
+    opacity:1
   };
 }
 let overlapPinBuckets=new Map();

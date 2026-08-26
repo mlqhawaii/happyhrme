@@ -76,7 +76,12 @@ function normalizeIsland(value){
 const CURATED_VENUE_COORDS={
   // Verified business/property coordinates. These override imported/geocoder data.
   "dixie grill bbq & crab shack":[21.3783436,-157.9351654],
-  "lost + found at wayfinder":[21.278807,-157.823260]
+  "lost + found at wayfinder":[21.278807,-157.823260],
+  // Mai Tai's Ala Moana is inside Ala Moana Center, Ho'okipa Terrace, 4th floor.
+  // The brand now also has a separate Aqua Palms location, so never let an
+  // ambiguous/stale geocode move the Ala Moana listing into Waikiki.
+  "mai tai’s ala moana":[21.29148,-157.84379],
+  "mai tai's ala moana":[21.29148,-157.84379]
 };
 function curatedVenueCoords(v){
   const key=String(v?.name||v?.venue_name||"").trim().toLowerCase();
@@ -84,6 +89,8 @@ function curatedVenueCoords(v){
   return Array.isArray(c)&&c.length===2?[Number(c[0]),Number(c[1])]:null;
 }
 const CURATED_VENUE_ADDRESSES={
+  "mai tai’s ala moana":"1450 Ala Moana Blvd, Suite 3247, Honolulu, HI 96814",
+  "mai tai's ala moana":"1450 Ala Moana Blvd, Suite 3247, Honolulu, HI 96814",
   "jackie rey's ohana grill hilo":"64 Keawe St, Hilo, HI 96720",
   "don's mai tai bar & restaurant":"75-5852 Alii Dr, Kailua-Kona, HI 96740",
   "on the rocks":"75-5824 Kahakai Rd, Kailua-Kona, HI 96740",
@@ -340,7 +347,7 @@ let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
 let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
-function markerCacheKey(v){return `happyhr:geo:v10:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+function markerCacheKey(v){return `happyhr:geo:v11:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 
 function normalizeGeoText(x){
   return String(x||"").toLowerCase()
@@ -767,9 +774,11 @@ function createVenueMarker(v,coords,status){
   const icon=L.divIcon({
     className:p.className,
     html:p.visual,
-    iconSize:[42,46],
-    iconAnchor:[21,43],
-    popupAnchor:[0,-36]
+    // The location coordinate belongs at the sharp bottom tip of the CSS pin.
+    // The rotated 38px pin extends to ~50px inside this wrapper.
+    iconSize:[42,50],
+    iconAnchor:[21,50],
+    popupAnchor:[0,-43]
   });
   // Marker is first created at the true coordinate, then the whole overlap
   // bucket is reflowed symmetrically whenever another venue joins it.

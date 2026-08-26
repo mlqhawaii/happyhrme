@@ -591,3 +591,31 @@
     0 0 22px rgba(22,201,95,.95),
     0 7px 16px rgba(0,0,0,.35);
 }
+
+
+/* Refined verified-pin glow for dense clusters.
+   Keep the bright "GO" green, but tighten the halo so overlapping pins remain distinct. */
+.adult-map-pin.verified-hh:not(.sponsored-map-pin){
+  box-shadow:
+    0 0 0 2px rgba(22,201,95,.26),
+    0 0 9px rgba(22,201,95,.56),
+    0 5px 12px rgba(0,0,0,.30);
+}
+.happyhr-marker-icon:hover .adult-map-pin.verified-hh:not(.sponsored-map-pin),
+.happyhr-marker-icon:focus .adult-map-pin.verified-hh:not(.sponsored-map-pin){
+  box-shadow:
+    0 0 0 3px rgba(22,201,95,.32),
+    0 0 13px rgba(22,201,95,.72),
+    0 7px 14px rgba(0,0,0,.34);
+}
+
+/* Sponsored pin: warmer gold edge so it stays visually separate from
+   both bright-green verified pins and muted sad/unverified pins. */
+.adult-map-pin.sponsored-map-pin,
+.premium-sponsored-pin{
+  border-color:#f5b72f!important;
+  box-shadow:
+    0 0 0 3px rgba(245,183,47,.28),
+    0 0 12px rgba(245,183,47,.42),
+    0 6px 14px rgba(0,0,0,.34)!important;
+}

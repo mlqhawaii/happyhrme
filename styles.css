@@ -671,3 +671,18 @@
 }
 .adult-pin-face i{left:5px!important;right:auto!important}
 .adult-pin-face b{right:5px!important;left:auto!important}
+
+
+/* Map pins are controls, not navigation links. This prevents page reloads
+   while preserving the existing marker appearance and Leaflet click behavior. */
+button.happyhr-pin-link{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  padding:0;
+  margin:0;
+  background:transparent;
+  font:inherit;
+  color:inherit;
+  cursor:pointer;
+}

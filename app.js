@@ -81,7 +81,9 @@ const CURATED_VENUE_COORDS={
   // The brand now also has a separate Aqua Palms location, so never let an
   // ambiguous/stale geocode move the Ala Moana listing into Waikiki.
   "mai tai’s ala moana":[21.29148,-157.84379],
-  "mai tai's ala moana":[21.29148,-157.84379]
+  "mai tai's ala moana":[21.29148,-157.84379],
+  // Lucky Strike Honolulu - Ala Moana Center, Suite 3260.
+  "lucky strike honolulu":[21.29184,-157.84474]
 };
 function curatedVenueCoords(v){
   const key=String(v?.name||v?.venue_name||"").trim().toLowerCase();
@@ -91,6 +93,7 @@ function curatedVenueCoords(v){
 const CURATED_VENUE_ADDRESSES={
   "mai tai’s ala moana":"1450 Ala Moana Blvd, Suite 3247, Honolulu, HI 96814",
   "mai tai's ala moana":"1450 Ala Moana Blvd, Suite 3247, Honolulu, HI 96814",
+  "lucky strike honolulu":"1450 Ala Moana Blvd, Suite 3260, Honolulu, HI 96814",
   "jackie rey's ohana grill hilo":"64 Keawe St, Hilo, HI 96720",
   "don's mai tai bar & restaurant":"75-5852 Alii Dr, Kailua-Kona, HI 96740",
   "on the rocks":"75-5824 Kahakai Rd, Kailua-Kona, HI 96740",
@@ -347,7 +350,7 @@ let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
 let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
-function markerCacheKey(v){return `happyhr:geo:v11:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+function markerCacheKey(v){return `happyhr:geo:v12:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 
 function normalizeGeoText(x){
   return String(x||"").toLowerCase()
@@ -701,7 +704,7 @@ function markerPresentation(v,status,coords,pinId){
     const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
     return {
       className:`happyhr-marker-icon${v.sponsored?' sponsored-marker-icon':''}`,
-      visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh${v.sponsored?' sponsored-map-pin':''}" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></a>`,
+      visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh${v.sponsored?' sponsored-map-pin':''}" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></button>`,
       popup:`<div class="venue-map-popup">${v.sponsored?'<span class="popup-sponsored-label">Sponsored</span>':''}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:v.sponsored?360:200,
       opacity:1
@@ -710,7 +713,7 @@ function markerPresentation(v,status,coords,pinId){
   if(status==='none'){
     return {
       className:'happyhr-marker-icon',
-      visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></a>`,
+      visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
       popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:-50,
       opacity:1
@@ -718,7 +721,7 @@ function markerPresentation(v,status,coords,pinId){
   }
   return {
     className:'happyhr-marker-icon',
-    visual:`<a class="happyhr-pin-link" href="${venuePinHref(v)}" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult unverified-venue-pin" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></a>`,
+    visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult unverified-venue-pin" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
     popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour not verified</b><span>This venue is in our dataset, but we have not confirmed a current happy hour yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
     z:-50,
     opacity:1

@@ -619,3 +619,55 @@
     0 0 12px rgba(245,183,47,.42),
     0 6px 14px rgba(0,0,0,.34)!important;
 }
+
+
+/* Map pin polish v3 */
+
+/* Verified pins: keep the bright green signal but make the glow subtle enough
+   that dense clusters still show individual marker shapes. */
+.adult-map-pin.verified-hh:not(.sponsored-map-pin){
+  box-shadow:
+    0 0 0 1px rgba(22,201,95,.20),
+    0 0 5px rgba(22,201,95,.34),
+    0 4px 10px rgba(0,0,0,.28);
+}
+.happyhr-marker-icon:hover .adult-map-pin.verified-hh:not(.sponsored-map-pin),
+.happyhr-marker-icon:focus .adult-map-pin.verified-hh:not(.sponsored-map-pin){
+  box-shadow:
+    0 0 0 2px rgba(22,201,95,.25),
+    0 0 8px rgba(22,201,95,.48),
+    0 6px 12px rgba(0,0,0,.32);
+}
+
+/* Keep the gold sponsored marker treatment, but remove the floating banner.
+   Sponsored remains labeled in the list/card for disclosure. */
+.sponsored-marker-icon::after{
+  content:none!important;
+  display:none!important;
+}
+
+/* Force perfectly matched eyes. Using <i> and <b> previously allowed tiny
+   browser rendering differences. Normalize every box/font property explicitly. */
+.adult-pin-face i,
+.adult-pin-face b{
+  display:block!important;
+  position:absolute!important;
+  width:4px!important;
+  height:4px!important;
+  min-width:4px!important;
+  max-width:4px!important;
+  min-height:4px!important;
+  max-height:4px!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  box-sizing:border-box!important;
+  font-size:0!important;
+  line-height:0!important;
+  font-weight:400!important;
+  top:7px!important;
+  transform:none!important;
+}
+.adult-pin-face i{left:5px!important;right:auto!important}
+.adult-pin-face b{right:5px!important;left:auto!important}

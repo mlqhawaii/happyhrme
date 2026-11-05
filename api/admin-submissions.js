@@ -2,6 +2,7 @@ import { isAdmin } from '../lib/admin-auth.js';
 import { supabaseAdminFetch } from '../lib/supabase-admin.js';
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store');
   if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
   try {
     const r = await supabaseAdminFetch(`happy_hour_submissions?${filters.join('&')}`);
     const text = await r.text();
-    if (!r.ok) return res.status(r.status).send(text);
+    if (!r.ok) return res.status(r.status === 401 || r.status === 403 ? 502 : r.status).json({ error: 'Could not load submissions from the database. Check the server database credentials and permissions.' });
 
     let rows = [];
     try { rows = JSON.parse(text); } catch { rows = []; }

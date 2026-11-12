@@ -327,6 +327,66 @@ function focusVenueFromMap(v){
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase()}
 function shortDeal(v){const parts=[];if(v.beer)parts.push(`<b>$${v.beer} beer</b>`);if(v.drinks&&v.drinks!=='—')parts.push(`<span>${v.drinks}</span>`);if(v.food&&v.food!=='—')parts.push(`<span>${v.food}</span>`);return parts.slice(0,2).join('')||''}
 function sponsoredLabel(v){return v.sponsored?'<span class="sponsored-label">Sponsored</span>':''}
+const accuracyVotes = new Map();
+
+function accuracyFeedback(v) {
+  const key = venueSelectionKey(v);
+  const vote = accuracyVotes.get(key);
+  const disabled = vote ? ' disabled' : '';
+  const name = escapeAttr(v.name);
+  return `<div class="venue-accuracy" role="group" aria-label="Accuracy feedback for ${name}">
+    <span>Is this info accurate?</span>
+    <button type="button" data-accuracy-vote="yes" aria-label="Yes, accurate" title="Yes, accurate"${disabled}>👍</button>
+    <button type="button" data-accuracy-vote="no" aria-label="No, needs checking" title="No, needs checking"${disabled}>👎</button>
+    <span class="venue-accuracy-status" role="status">${vote === 'sent' ? 'Thanks for the feedback.' : vote === 'sending' ? 'Sending…' : ''}</span>
+  </div>`;
+}
+
+document.addEventListener('click', async event => {
+  const button = event.target.closest('[data-accuracy-vote]');
+  if (!button) return;
+  const key = button.closest('[data-venue-key]')?.dataset.venueKey;
+  const venue = venues.find(v => venueSelectionKey(v) === key);
+  if (!venue || accuracyVotes.has(key)) return;
+
+  const update = (message, disabled) => {
+    document.querySelectorAll(`[data-venue-key="${CSS.escape(key)}"] .venue-accuracy`).forEach(group => {
+      group.querySelectorAll('button').forEach(control => { control.disabled = disabled; });
+      group.querySelector('[role="status"]').textContent = message;
+    });
+  };
+  accuracyVotes.set(key, 'sending');
+  update('Sending…', true);
+  const payload = {
+    submission_type: 'correction',
+    venue_name: venue.name,
+    market: islandNames[venueMarketKey(venue)] || venueMarketKey(venue),
+    area: areaLabel(venue),
+    venue_key: key,
+    details: button.dataset.accuracyVote === 'yes'
+      ? 'Accuracy feedback: a visitor says the listing is accurate.'
+      : 'Accuracy feedback: a visitor says the listing needs checking.',
+  };
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/happy_hour_submissions`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(`Accuracy feedback failed (${response.status})`);
+    accuracyVotes.set(key, 'sent');
+    update('Thanks for the feedback.', true);
+  } catch {
+    accuracyVotes.delete(key);
+    update('Couldn’t send. Try again.', false);
+  }
+});
+
 function cardHTML(v,full=false){
   const knowledge=venueKnowledgeState(v);
   if(knowledge==='none'){
@@ -335,7 +395,7 @@ function cardHTML(v,full=false){
   if(knowledge==='checking'){
     return `<article class="venue-row venue-row-checking${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar checking">?</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>Known venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>Being checked</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>Not verified yet</div><div class="venue-cell"><span class="mobile-label">Food deal</span>Not verified yet</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>Happy-hour details not verified yet</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status checking">? Checking</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button>${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Check ${v.name}">›</a>`:''}</div></article>`;
   }
-  const s=statusFor(v);return `<article class="venue-row${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div></article>`}
+  const s=statusFor(v);return `<article class="venue-row${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a></div>${accuracyFeedback(v)}</article>`}
 function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
 function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')}
 function render(){const list=filtered();const pending=pendingCountForMarket();const verified=completeVenuesForMarket().length;const none=verifiedNoHappyHourForMarket().length;resultCount.textContent=list.length;const meta=resultCount.parentElement;if(meta){meta.querySelectorAll('.pending-check').forEach(el=>el.remove());const span=document.createElement('span');span.className='pending-check';span.textContent=` · ${verified} verified${none?` · ${none} no happy hour`:''}${pending?` · ${pending} being checked`:''}`;meta.appendChild(span)}grid.innerHTML=list.length?listHTML(list,false):'<div class="empty-results">No venues match these filters yet.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div class="empty-results">No venues match these filters yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }

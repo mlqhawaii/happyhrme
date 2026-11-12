@@ -686,3 +686,9 @@ button.happyhr-pin-link{
   color:inherit;
   cursor:pointer;
 }
+
+.venue-accuracy{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:12px;color:#385961}
+.venue-accuracy button{min-width:44px;min-height:44px;border:1px solid #c9dddc;border-radius:8px;background:#fff;font-size:16px;cursor:pointer}
+.venue-accuracy button:hover:not(:disabled),.venue-accuracy button:focus-visible{background:#e8f5f3}
+.venue-accuracy button:disabled{opacity:.55;cursor:default}
+.venue-accuracy-status:empty{display:none}

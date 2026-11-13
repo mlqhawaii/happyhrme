@@ -1062,7 +1062,7 @@ byId('islandFilter').addEventListener('change',e=>setIsland(e.target.value));byI
 byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render();track('time_filter',{value:e.target.value})});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render();track('price_filter',{value:e.target.value})});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render();track('open_now_filter',{enabled:e.target.checked})});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});
 byId('mapViewBtn').onclick=()=>setView('map');byId('listViewBtn').onclick=()=>setView('list');byId('navMap').onclick=()=>setView('map');byId('navList').onclick=()=>setView('list');byId('clearFilters').onclick=clearFilters;byId('clearFilters2').onclick=clearFilters;
 const modal=byId('cityModal');function closeModal(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true')}byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=closeModal;modal.querySelector('.modal-backdrop').onclick=closeModal;modal.querySelectorAll('[data-island]').forEach(b=>b.addEventListener('click',()=>setIsland(b.dataset.island)));
-const params=new URLSearchParams(location.search);if(islandConfigs[params.get('market')])state.island=params.get('market');else if(islandConfigs[params.get('island')])state.island=params.get('island');const requestedArea=params.get('area');updateContextText();if(requestedArea&&currentRegions().some(r=>r.key===requestedArea))state.neighborhood=requestedArea;
+const params=new URLSearchParams(location.search);if(islandConfigs[params.get('market')])state.island=params.get('market');else if(islandConfigs[params.get('island')])state.island=params.get('island');const requestedArea=params.get('area');state.open=params.get('open')==='1';updateContextText();if(requestedArea&&currentRegions().some(r=>r.key===requestedArea))state.neighborhood=requestedArea;
 sync();renderCoverage();render();initMap();loadVenuesFromSupabase();setInterval(()=>{byId('localClock').textContent=marketNow().label;render()},60000);
 
 
@@ -1183,6 +1183,25 @@ window.addEventListener('happyhr:market',e=>{let m=e.detail?.market;const aliase
   document.addEventListener('DOMContentLoaded', async function(){
     const select = getMarketSelect();
     ensureNationalOptions(select);
+
+    const nearby = q('#useNearbyMarket');
+    const nearbyStatus = q('#nearbyMarketStatus');
+    nearby?.addEventListener('click', async () => {
+      nearby.disabled = true;
+      nearbyStatus.hidden = false;
+      nearbyStatus.textContent = 'Looking for your city…';
+      try {
+        const guess = await window.happyHrGuessMarket?.();
+        if (!guess?.market || !supported[guess.market]) throw new Error('No supported city found');
+        applyMarket(guess.market, 'nearby_button');
+        nearbyStatus.textContent = `Showing happy hours in ${displayNames[guess.market]}.`;
+      } catch {
+        nearbyStatus.textContent = 'Choose a city to see local happy hours.';
+        select?.focus();
+      } finally {
+        nearby.disabled = false;
+      }
+    });
 
     if (select) {
       select.addEventListener('change', () => {

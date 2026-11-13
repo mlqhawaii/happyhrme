@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="HappyHr.Me finds current happy hours across cities nationwide, with map and list views, area-by-area browsing, open-now status, drink deals and food specials." />
+  <meta name="description" content="Find happy hour near you. Browse local food and drink specials by city, neighborhood, price, and what’s happening now." />
   <link rel="canonical" href="https://www.happyhr.me/" />
     <script>
   (function(){
@@ -46,7 +46,7 @@
   <meta property="og:url" content="https://www.happyhr.me/" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary" />
-  <title>HappyHr.Me — Happy Hours Near You</title>
+  <title>Happy Hour Near Me — Find Local Deals | HappyHr.Me</title>
   <link rel="icon" type="image/png" sizes="128x128" href="favicon.png"><link rel="apple-touch-icon" href="favicon.png">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LSM7WTCQ9D"></script>
@@ -67,12 +67,20 @@
 
 <header class="site-header"><div class="shell nav-wrap"><a class="brand brand-image-link" href="#top" aria-label="HappyHr.Me home"><img class="brand-reference" src="brand-reference.png" alt="HappyHr.Me" /></a><nav class="desktop-nav"><a class="active" href="#finder">Happy hours</a><a href="#finder" id="navMap">Map</a><a href="#finder" id="navList">List</a><a href="/owners">For venues</a><a href="#about">About</a></nav><div class="nav-actions"><div class="nav-search"><span>⌕</span><input id="headerSearch" type="search" placeholder="Search bars, restaurants…"></div><button class="city-pill" id="cityPill" type="button">Choose city ▾</button></div></div></header>
 <main id="top">
-<section class="hero shell"><div class="hero-copy"><div class="eyebrow" id="heroEyebrow">CURATED HAPPY HOURS · CITY BY CITY</div><h1>Happy hour,<br>without the hunt.</h1><p id="heroDescription">Find current drink and food deals near you — organized by city and area, with source links for every listing.</p></div><div class="hero-features"><div><span class="feature-icon">◷</span><p><strong>Checked regularly</strong><small>Weekly automated source checks.</small></p></div><div><span class="feature-icon">◇</span><p><strong>Curated quality</strong><small>Real venue deals with source links.</small></p></div><div><span class="feature-icon">⌖</span><p><strong>Growing nationwide</strong><small>Hawaiʻi plus 22 major U.S. cities and expanding.</small></p></div></div></section>
+<section class="hero shell"><div class="hero-copy"><div class="eyebrow" id="heroEyebrow">CURATED HAPPY HOURS · CITY BY CITY</div><h1>Find happy hour near you.</h1><p id="heroDescription">Find current drink and food deals near you — organized by city and area, with source links for every listing.</p></div><div class="hero-features"><div><span class="feature-icon">◷</span><p><strong>Checked regularly</strong><small>Weekly automated source checks.</small></p></div><div><span class="feature-icon">◇</span><p><strong>Curated quality</strong><small>Real venue deals with source links.</small></p></div><div><span class="feature-icon">⌖</span><p><strong>Growing nationwide</strong><small>Hawaiʻi plus 22 major U.S. cities and expanding.</small></p></div></div></section>
 <section id="finder" class="finder-section"><div class="shell">
   <div class="coverage-headline" id="coverageHeadline" hidden>
     <strong id="coverageNationwide"></strong>
     <span id="coverageLocal"></span>
   </div>
+  <div class="contribute-actions" aria-label="Find local happy hours">
+    <button type="button" class="contribute-choice secondary" id="useNearbyMarket">Find my city</button>
+    <a href="#islandFilter">Choose a city</a>
+    <a href="#openNowFilter">Open now filter</a>
+    <a href="/los-angeles-happy-hour">Los Angeles happy hours</a>
+    <a href="/new-york-happy-hour">New York City happy hours</a>
+  </div>
+  <p id="nearbyMarketStatus" role="status" hidden></p>
   <div class="filter-toolbar">
     <a class="contribute-choice" href="#contribute" data-contribution-type="new_venue">Submit a happy hour</a>
 <select id="islandFilter" aria-label="City or market">

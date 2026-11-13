@@ -108,7 +108,7 @@ function hasCuratedVenueAddress(v){
   return Boolean(String(v?.address||"").trim() || CURATED_VENUE_ADDRESSES[key]);
 }
 function rowToVenue(row){return {
-  id:row.id,name:row.venue_name,island:normalizeIsland(row.island),city:row.city||"",market:row.market||"",metroSlug:row.metro_slug||"",state:row.state||"",country:row.country||"US",
+  id:row.id,placeId:row.google_place_id,name:row.venue_name,island:normalizeIsland(row.island),city:row.city||"",market:row.market||"",metroSlug:row.metro_slug||"",state:row.state||"",country:row.country||"US",
   neighborhood:row.neighborhood||row.area||"",area:row.area||row.neighborhood||"",
   address:curatedVenueAddress(row),latitude:row.latitude==null?null:Number(row.latitude),longitude:row.longitude==null?null:Number(row.longitude),
   days:row.days||"Confirm hours",early:row.early_display||"Confirm current hours",late:row.late_display||"—",
@@ -170,8 +170,28 @@ async function loadFeaturedPlacements(){
 }
 
 async function loadVenuesFromSupabase(){
-  const url=`${SUPABASE_URL}/rest/v1/happy_hours?select=*&active=eq.true&order=venue_name.asc`;
-  try{const response=await fetch(url,{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,Accept:"application/json"}});if(!response.ok)throw new Error(`Supabase ${response.status}`);const rows=await response.json();if(!Array.isArray(rows)||!rows.length)throw new Error("No active venues returned");venues=rows.map(rowToVenue).filter(v=>venueBelongsToMarket(v,venueMarketKey(v)));await loadFeaturedPlacements();try{const selected=new URLSearchParams(location.search).get('venue');if(selected)state.selectedVenueKey=selected.toLowerCase()}catch(e){}document.documentElement.dataset.dataSource="supabase";refreshAll();}
+  const pageSize=500;
+  const url=`${SUPABASE_URL}/rest/v1/happy_hours?select=*&active=eq.true&order=venue_name.asc,id.asc`;
+  try{
+    const rows=[];
+    for(let offset=0;;offset+=pageSize){
+      const response=await fetch(`${url}&limit=${pageSize}&offset=${offset}`,{
+        headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,Accept:"application/json"}
+      });
+      if(!response.ok)throw new Error(`Supabase ${response.status}`);
+      const page=await response.json();
+      if(!Array.isArray(page))throw new Error("Invalid venue response");
+      rows.push(...page);
+      if(page.length<pageSize)break;
+    }
+    if(!rows.length)throw new Error("No active venues returned");
+    venues=rows.map(rowToVenue).filter(v=>venueBelongsToMarket(v,venueMarketKey(v)));
+    await loadFeaturedPlacements();
+    const selected=new URLSearchParams(location.search).get('venue');
+    if(selected)state.selectedVenueKey=selected.toLowerCase();
+    document.documentElement.dataset.dataSource="supabase";
+    refreshAll();
+  }
   catch(error){console.warn("Using bundled fallback because Supabase could not be reached.",error);document.documentElement.dataset.dataSource="fallback";refreshAll();}
 }
 
@@ -239,6 +259,28 @@ function isCompleteHappyHour(v){
   return hasTime&&hasUsefulDeal(v);
 }
 function completeVenuesForMarket(key=state.island){return venues.filter(v=>venueMarketKey(v)===key&&isCompleteHappyHour(v));}
+function renderCoverageHeadline(){
+  const headline=byId('coverageHeadline');
+  if(document.documentElement.dataset.dataSource!=='supabase'){
+    headline.hidden=true;
+    return;
+  }
+  const markets=new Set();
+  const nationwide=new Set();
+  const local=new Set();
+  for(const venue of venues){
+    const market=venueMarketKey(venue);
+    if(!islandConfigs[market]||venue.country!=='US'||!isCompleteHappyHour(venue))continue;
+    const venueKey=venue.placeId||`${market}|${cleanMatchText(venue.name)}|${cleanMatchText(venue.address||areaLabel(venue))}`;
+    markets.add(market);
+    nationwide.add(venueKey);
+    if(market===state.island)local.add(venueKey);
+  }
+  const format=new Intl.NumberFormat('en-US');
+  byId('coverageNationwide').textContent=`${format.format(nationwide.size)} verified happy-hour ${nationwide.size===1?'spot':'spots'} across ${markets.size} U.S. ${markets.size===1?'market':'markets'}`;
+  byId('coverageLocal').textContent=`${islandConfigs[state.island].label} · ${format.format(local.size)} verified ${local.size===1?'spot':'spots'}`;
+  headline.hidden=!nationwide.size;
+}
 function pendingVenuesForMarket(key=state.island){return venues.filter(v=>venueMarketKey(v)===key&&!v.noHappyHour&&!isCompleteHappyHour(v));}
 function pendingCountForMarket(key=state.island){return pendingVenuesForMarket(key).length;}
 function verifiedNoHappyHourForMarket(key=state.island){return venues.filter(v=>venueMarketKey(v)===key&&v.noHappyHour);}
@@ -1014,7 +1056,7 @@ function initMap(){
   window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100));
 }
 function renderCoverage(){const strip=byId('coverageStrip');const regs=currentRegions().filter(r=>r.key!=='__market__');strip.innerHTML=regs.map(r=>{const count=completeVenuesForMarket().filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();fitCurrentIsland();track('area_filter',{island:state.island,area:b.textContent})}))}
-function refreshAll(){updateContextText();sync();render();renderCoverage();renderMapMarkers()}
+function refreshAll(){renderCoverageHeadline();updateContextText();sync();render();renderCoverage();renderMapMarkers()}
 ['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));
 byId('islandFilter').addEventListener('change',e=>setIsland(e.target.value));byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();renderCoverage();fitCurrentIsland();track('area_filter',{island:state.island,area:e.target.value})});
 byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render();track('time_filter',{value:e.target.value})});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render();track('price_filter',{value:e.target.value})});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render();track('open_now_filter',{enabled:e.target.checked})});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});

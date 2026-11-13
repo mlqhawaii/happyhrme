@@ -698,3 +698,19 @@ button.happyhr-pin-link{
   .venue-row:has(.venue-accuracy) .venue-main{padding-right:116px}
   .venue-row:has(.venue-accuracy) .venue-link{top:12px;margin-top:0}
 }
+
+.coverage-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .25rem 1rem;
+  margin-bottom: .75rem;
+  color: #195b5a;
+}
+.coverage-headline[hidden] {
+  display: none;
+}
+.coverage-headline span {
+  font-size: .875rem;
+}

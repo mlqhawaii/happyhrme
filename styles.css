@@ -687,10 +687,11 @@ button.happyhr-pin-link{
   cursor:pointer;
 }
 
-.venue-accuracy{position:relative;display:inline-flex;align-items:center;gap:4px;flex:none}
+.venue-accuracy{position:relative;display:inline-grid;grid-template-columns:repeat(2,30px);gap:2px 4px;flex:none}
 .venue-accuracy button{width:30px;height:32px;padding:0;border:1px solid #c9dddc;border-radius:6px;background:#fff;font-size:14px;cursor:pointer}
 .venue-accuracy button:hover:not(:disabled),.venue-accuracy button:focus-visible{background:#e8f5f3}
 .venue-accuracy button:disabled{opacity:.55;cursor:default}
+.venue-accuracy-label{grid-column:1/-1;text-align:center;color:#385961;font-size:11px;line-height:12px}
 .venue-accuracy-status{position:absolute;right:0;top:100%;z-index:2;white-space:nowrap;padding:3px 6px;border-radius:4px;background:#fff;color:#385961;font-size:11px;box-shadow:0 1px 4px #0002}
 .venue-accuracy-status:empty{display:none}
 @media(max-width:760px){

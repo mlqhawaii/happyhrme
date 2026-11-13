@@ -337,6 +337,7 @@ function accuracyFeedback(v) {
   return `<div class="venue-accuracy" role="group" aria-label="Accuracy feedback for ${name}">
     <button type="button" data-accuracy-vote="yes" aria-label="Yes, accurate" title="Yes, accurate"${disabled}>👍</button>
     <button type="button" data-accuracy-vote="no" aria-label="No, needs checking" title="No, needs checking"${disabled}>👎</button>
+    <span class="venue-accuracy-label" aria-hidden="true">Correct?</span>
     <span class="venue-accuracy-status" role="status">${vote === 'sent' ? 'Thanks for the feedback.' : vote === 'sending' ? 'Sending…' : ''}</span>
   </div>`;
 }

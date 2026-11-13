@@ -246,42 +246,52 @@ const happyHourWindows={
   prime:{start:18,end:22,label:'Prime time'},
   late:{start:22,end:30,label:'Late night'}
 };
-function displayTimeRanges(v){
+function displayTimeRanges(text){
   const range=/(?<![\d:])(\d{1,2})(?::([0-5]\d))?\s*([ap]m)?\s*(?:[-–—]|\bto\b)\s*(?:(\d{1,2})(?::([0-5]\d))?\s*([ap]m)?\b|(midnight|clos(?:e|ing))\b)/gi;
   const ranges=[];
-  for(const text of [v.early,v.late]){
-    for(const [,startHour,startMinute,startPeriod,endHour,endMinute,endPeriod,endWord] of String(text||'').matchAll(range)){
-      const startMeridiem=(startPeriod||endPeriod||'').toLowerCase();
-      const endMeridiem=(endPeriod||startPeriod||'').toLowerCase();
-      if(!startMeridiem||Number(startHour)<1||Number(startHour)>12)continue;
-      const start=Number(startHour)%12+Number(startMinute||0)/60+(startMeridiem==='pm'?12:0);
-      if(endWord){
-        // A start inside a window qualifies even when the exact closing time is unknown.
-        ranges.push([start,endWord.toLowerCase()==='midnight'?24:start+1/60]);
-      }else if(Number(endHour)>=1&&Number(endHour)<=12){
-        let end=Number(endHour)%12+Number(endMinute||0)/60+(endMeridiem==='pm'?12:0);
-        // Shared meridiem: "11:00–7:00 PM" starts in the morning.
-        if(!startPeriod&&endPeriod&&start>end)ranges.push([start-12+(start<12?24:0),end]);
-        else{
-          if(startPeriod&&!endPeriod&&end<start)end=(end+12)%24;
-          ranges.push([start,end]);
-        }
+  for(const match of String(text||'').matchAll(range)){
+    const [label,startHour,startMinute,startPeriod,endHour,endMinute,endPeriod,endWord]=match;
+    const startMeridiem=(startPeriod||endPeriod||'').toLowerCase();
+    const endMeridiem=(endPeriod||startPeriod||'').toLowerCase();
+    if(!startMeridiem||Number(startHour)<1||Number(startHour)>12)continue;
+    const start=Number(startHour)%12+Number(startMinute||0)/60+(startMeridiem==='pm'?12:0);
+    if(endWord){
+      // A start inside a window qualifies even when the exact closing time is unknown.
+      ranges.push([start,endWord.toLowerCase()==='midnight'?24:start+1/60,label,match.index]);
+    }else if(Number(endHour)>=1&&Number(endHour)<=12){
+      let end=Number(endHour)%12+Number(endMinute||0)/60+(endMeridiem==='pm'?12:0);
+      // Shared meridiem: "11:00–7:00 PM" starts in the morning.
+      if(!startPeriod&&endPeriod&&start>end)ranges.push([start-12+(start<12?24:0),end,label,match.index]);
+      else{
+        if(startPeriod&&!endPeriod&&end<start)end=(end+12)%24;
+        ranges.push([start,end,label,match.index]);
       }
     }
   }
   return ranges;
 }
+function overlapsHappyHourWindow(slot,window){
+  if(!Array.isArray(slot))return false;
+  const [start,end]=slot;
+  if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||start>=24||end<0||end>48||start===end)return false;
+  const overnightEnd=end<start?end+24:end;
+  return (start<window.end&&overnightEnd>window.start)
+    ||(start+24<window.end&&overnightEnd+24>window.start);
+}
 function hasHappyHourInWindow(v,window){
   const scheduled=Object.values(v.slots||{}).flatMap(slots=>Array.isArray(slots)?slots:[]);
-  const ranges=scheduled.length?scheduled:displayTimeRanges(v);
-  return ranges.some(slot=>{
-    if(!Array.isArray(slot))return false;
-    const [start,end]=slot;
-    if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||start>=24||end<0||end>48||start===end)return false;
-    const overnightEnd=end<start?end+24:end;
-    return (start<window.end&&overnightEnd>window.start)
-      ||(start+24<window.end&&overnightEnd+24>window.start);
-  });
+  const ranges=scheduled.length?scheduled:[...displayTimeRanges(v.early),...displayTimeRanges(v.late)];
+  return ranges.some(slot=>overlapsHappyHourWindow(slot,window));
+}
+function highlightPrimeHours(text){
+  let result='',offset=0;
+  for(const range of displayTimeRanges(text)){
+    if(!overlapsHappyHourWindow(range,happyHourWindows.prime))continue;
+    const [,,label,index]=range;
+    result+=text.slice(offset,index)+`<strong class="prime-hours">${label}</strong>`;
+    offset=index+label.length;
+  }
+  return result+text.slice(offset);
 }
 function happyHourTiming(v){
   const labels=Object.values(happyHourWindows).filter(window=>hasHappyHourInWindow(v,window)).map(window=>window.label);
@@ -482,7 +492,8 @@ function cardHTML(v,full=false){
   if(knowledge==='checking'){
     return `<article class="venue-row venue-row-checking${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar checking">?</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>Known venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>Being checked</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>Not verified yet</div><div class="venue-cell"><span class="mobile-label">Food deal</span>Not verified yet</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>Happy-hour details not verified yet</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status checking">? Checking</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button>${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Check ${v.name}">›</a>`:''}</div></article>`;
   }
-  const s=statusFor(v);return `<article class="venue-row${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}${happyHourTiming(v)}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>${accuracyFeedback(v)}</div></article>`}
+  const prime=hasHappyHourInWindow(v,happyHourWindows.prime);
+  return `<article class="venue-row${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><span class="venue-hours">${prime?highlightPrimeHours(v.early):v.early}</span>${v.late!=='—'?`<small>${prime?highlightPrimeHours(v.late):v.late}</small>`:''}${happyHourTiming(v)}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>${accuracyFeedback(v)}</div></article>`}
 function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
 function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')}
 function render(){const list=filtered();const pending=pendingCountForMarket();const verified=completeVenuesForMarket().length;const none=verifiedNoHappyHourForMarket().length;resultCount.textContent=list.length;const meta=resultCount.parentElement;if(meta){meta.querySelectorAll('.pending-check').forEach(el=>el.remove());const span=document.createElement('span');span.className='pending-check';span.textContent=` · ${verified} verified${none?` · ${none} no happy hour`:''}${pending?` · ${pending} being checked`:''}`;meta.appendChild(span)}grid.innerHTML=list.length?listHTML(list,false):'<div class="empty-results">No venues match these filters yet.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div class="empty-results">No venues match these filters yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }

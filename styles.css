@@ -714,3 +714,5 @@ button.happyhr-pin-link{
 .coverage-headline span {
   font-size: .875rem;
 }
+
+.venue-hours{font-weight:700}.venue-cell .prime-hours{font-weight:800;font-style:italic;color:var(--teal-dark)}

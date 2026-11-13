@@ -401,10 +401,10 @@ function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')
 function render(){const list=filtered();const pending=pendingCountForMarket();const verified=completeVenuesForMarket().length;const none=verifiedNoHappyHourForMarket().length;resultCount.textContent=list.length;const meta=resultCount.parentElement;if(meta){meta.querySelectorAll('.pending-check').forEach(el=>el.remove());const span=document.createElement('span');span.className='pending-check';span.textContent=` · ${verified} verified${none?` · ${none} no happy hour`:''}${pending?` · ${pending} being checked`:''}`;meta.appendChild(span)}grid.innerHTML=list.length?listHTML(list,false):'<div class="empty-results">No venues match these filters yet.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div class="empty-results">No venues match these filters yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
 function sync(){const sel=byId('islandFilter');if(sel&&[...sel.options].some(o=>o.value===state.island))sel.value=state.island;byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
 function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();fitCurrentIsland();track('filters_cleared',{island:state.island})}
-function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>hhMap.invalidateSize(),80);track('view_change',{view:mode,island:state.island})}
+function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>{hhMap.invalidateSize();fitCurrentIsland()},80);track('view_change',{view:mode,island:state.island})}
 function updateContextText(){const label=islandNames[state.island]||islandConfigs[state.island]?.label||state.island;byId('cityPill').textContent=`${label} ▾`;byId('heroEyebrow').textContent=`${label.toUpperCase()} · VERIFIED HAPPY HOURS`;byId('heroDescription').textContent=`Find current drink and food deals around ${label} — by area, time and price.`;byId('mapBadgeTitle').textContent=label;byId('resultsTitle').textContent=`Deals around ${label}`;byId('fullListTitle').textContent=`All ${label} happy hours`;buildAreaOptions()}
 function buildAreaOptions(){const select=byId('neighborhoodFilter'),cfg=islandConfigs[state.island];const regions=(cfg?.regions||[]).filter(r=>r.key!=='__market__');select.innerHTML='<option value="all">⌖ All areas</option>'+regions.map(r=>`<option value="${r.key}">${r.label}</option>`).join('');}
-function setIsland(island){if(!islandConfigs[island])return;state.island=island;state.neighborhood='all';updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland();closeModal();history.replaceState(null,'',`${location.pathname}?${['Oahu','Maui','Kauai','Hawaii'].includes(island)?'island':'market'}=${encodeURIComponent(island)}`);track('market_select',{market:island})}
+function setIsland(island){if(!islandConfigs[island])return;state.island=island;state.neighborhood='all';updateContextText();sync();render();renderCoverage();renderMapMarkers();closeModal();history.replaceState(null,'',`${location.pathname}?${['Oahu','Maui','Kauai','Hawaii'].includes(island)?'island':'market'}=${encodeURIComponent(island)}`);track('market_select',{market:island})}
 
 let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
@@ -918,6 +918,11 @@ async function renderMapMarkers(){
     }
   }));
 
+  fitCurrentIsland();
+  const initialCenter = hhMap.getCenter();
+  const initialZoom = hhMap.getZoom();
+  const initialArea = state.neighborhood;
+
   // Upgrade approximate pins to exact geocoded coordinates in the background.
   // A failed lookup leaves the fallback marker in the correct neighborhood
   // instead of hiding the venue.
@@ -937,9 +942,31 @@ async function renderMapMarkers(){
     // Small stagger avoids hammering the public geocoder.
     await new Promise(r=>setTimeout(r,35));
   }
+  if (unresolved.length && renderMapMarkers.token === renderToken
+      && state.neighborhood === initialArea && hhMap.getZoom() === initialZoom
+      && hhMap.getCenter().equals(initialCenter)) {
+    fitCurrentIsland();
+  }
 }
 
-function fitCurrentIsland(){if(!hhMap)return;const cfg=islandConfigs[state.island];hhMap.fitBounds(L.latLngBounds(cfg.bounds),{padding:[18,18]});setTimeout(()=>hhMap.invalidateSize(),80)}
+function fitCurrentIsland() {
+  if (!hhMap || !hhMap.getContainer().clientWidth) return;
+  const area = currentRegions().find(region => region.key === state.neighborhood && region.key !== '__market__');
+  const pins = [...mapPinRegistry.values()]
+    .filter(({ venue }) => !area || venue.neighborhood === area.key)
+    .map(({ marker }) => marker.getLatLng());
+  if (pins.length) {
+    hhMap.fitBounds(L.latLngBounds(pins), {
+      paddingTopLeft: [32, 66],
+      paddingBottomRight: [32, 54],
+      maxZoom: 15,
+    });
+  } else if (area) {
+    hhMap.setView([area.lat, area.long], area.zoom);
+  } else {
+    hhMap.fitBounds(L.latLngBounds(islandConfigs[state.island].bounds), { padding: [18, 18] });
+  }
+}
 function initMap(){
   if(!window.L||hhMap)return;
   hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});
@@ -986,10 +1013,10 @@ function initMap(){
   setTimeout(()=>hhMap.invalidateSize(),150);
   window.addEventListener('resize',()=>setTimeout(()=>hhMap.invalidateSize(),100));
 }
-function renderCoverage(){const strip=byId('coverageStrip');const regs=currentRegions().filter(r=>r.key!=='__market__');strip.innerHTML=regs.map(r=>{const count=completeVenuesForMarket().filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();const r=currentRegions().find(x=>x.key===b.dataset.region);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:b.textContent})}))}
-function refreshAll(){updateContextText();sync();render();renderCoverage();renderMapMarkers();fitCurrentIsland()}
+function renderCoverage(){const strip=byId('coverageStrip');const regs=currentRegions().filter(r=>r.key!=='__market__');strip.innerHTML=regs.map(r=>{const count=completeVenuesForMarket().filter(v=>v.neighborhood===r.key).length;return `<button class="coverage-chip${state.neighborhood===r.key?' active':''}" data-region="${r.key}">${r.label} · ${count}</button>`}).join('');strip.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.neighborhood=b.dataset.region;sync();render();renderCoverage();fitCurrentIsland();track('area_filter',{island:state.island,area:b.textContent})}))}
+function refreshAll(){updateContextText();sync();render();renderCoverage();renderMapMarkers()}
 ['searchInput','headerSearch'].forEach(id=>byId(id).addEventListener('input',e=>{state.q=e.target.value;sync();render()}));
-byId('islandFilter').addEventListener('change',e=>setIsland(e.target.value));byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();renderCoverage();const r=currentRegions().find(x=>x.key===state.neighborhood);if(hhMap&&r)hhMap.flyTo([r.lat,r.long],r.zoom,{duration:.7});track('area_filter',{island:state.island,area:e.target.value})});
+byId('islandFilter').addEventListener('change',e=>setIsland(e.target.value));byId('neighborhoodFilter').addEventListener('change',e=>{state.neighborhood=e.target.value;render();renderCoverage();fitCurrentIsland();track('area_filter',{island:state.island,area:e.target.value})});
 byId('timeFilter').addEventListener('change',e=>{state.time=e.target.value;render();track('time_filter',{value:e.target.value})});byId('priceFilter').addEventListener('change',e=>{state.price=e.target.value;render();track('price_filter',{value:e.target.value})});byId('openNowFilter').addEventListener('change',e=>{state.open=e.target.checked;render();track('open_now_filter',{enabled:e.target.checked})});byId('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render()});
 byId('mapViewBtn').onclick=()=>setView('map');byId('listViewBtn').onclick=()=>setView('list');byId('navMap').onclick=()=>setView('map');byId('navList').onclick=()=>setView('list');byId('clearFilters').onclick=clearFilters;byId('clearFilters2').onclick=clearFilters;
 const modal=byId('cityModal');function closeModal(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true')}byId('cityPill').onclick=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false')};byId('modalClose').onclick=closeModal;modal.querySelector('.modal-backdrop').onclick=closeModal;modal.querySelectorAll('[data-island]').forEach(b=>b.addEventListener('click',()=>setIsland(b.dataset.island)));

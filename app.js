@@ -242,7 +242,51 @@ const byId=id=>document.getElementById(id),grid=byId('venueGrid'),fullGrid=byId(
 function track(name,params={}){try{if(typeof gtag==='function')gtag('event',name,params)}catch(e){}}
 function marketNow(){const tz=MARKET_TIMEZONES[state.island]||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));const days={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};let hour=Number(map.hour);if(hour===24)hour=0;return{day:days[map.weekday],hour:hour+Number(map.minute)/60,label:`${String(hour).padStart(2,'0')}:${map.minute}`}}
 function statusFor(v){const n=marketNow(),slots=v.slots[n.day]||[];for(const[s,e]of slots){if(n.hour>=s&&n.hour<e)return{key:'open',label:'Open now'}}const future=slots.find(([s])=>s>n.hour);if(future){let h=Math.floor(future[0]),m=future[0]%1?30:0;return{key:'later',label:`Starts ${h>12?h-12:h}:${m?'30':'00'} ${h>=12?'PM':'AM'}`}}return{key:'closed',label:slots.length?'Done today':'Check hours'}}
-function isLate(v){return v.tags.includes('late')||v.late!=='—'}
+const happyHourWindows={
+  prime:{start:18,end:22,label:'Prime time'},
+  late:{start:22,end:30,label:'Late night'}
+};
+function displayTimeRanges(v){
+  const range=/(?<![\d:])(\d{1,2})(?::([0-5]\d))?\s*([ap]m)?\s*(?:[-–—]|\bto\b)\s*(?:(\d{1,2})(?::([0-5]\d))?\s*([ap]m)?\b|(midnight|clos(?:e|ing))\b)/gi;
+  const ranges=[];
+  for(const text of [v.early,v.late]){
+    for(const [,startHour,startMinute,startPeriod,endHour,endMinute,endPeriod,endWord] of String(text||'').matchAll(range)){
+      const startMeridiem=(startPeriod||endPeriod||'').toLowerCase();
+      const endMeridiem=(endPeriod||startPeriod||'').toLowerCase();
+      if(!startMeridiem||Number(startHour)<1||Number(startHour)>12)continue;
+      const start=Number(startHour)%12+Number(startMinute||0)/60+(startMeridiem==='pm'?12:0);
+      if(endWord){
+        // A start inside a window qualifies even when the exact closing time is unknown.
+        ranges.push([start,endWord.toLowerCase()==='midnight'?24:start+1/60]);
+      }else if(Number(endHour)>=1&&Number(endHour)<=12){
+        let end=Number(endHour)%12+Number(endMinute||0)/60+(endMeridiem==='pm'?12:0);
+        // Shared meridiem: "11:00–7:00 PM" starts in the morning.
+        if(!startPeriod&&endPeriod&&start>end)ranges.push([start-12+(start<12?24:0),end]);
+        else{
+          if(startPeriod&&!endPeriod&&end<start)end=(end+12)%24;
+          ranges.push([start,end]);
+        }
+      }
+    }
+  }
+  return ranges;
+}
+function hasHappyHourInWindow(v,window){
+  const scheduled=Object.values(v.slots||{}).flatMap(slots=>Array.isArray(slots)?slots:[]);
+  const ranges=scheduled.length?scheduled:displayTimeRanges(v);
+  return ranges.some(slot=>{
+    if(!Array.isArray(slot))return false;
+    const [start,end]=slot;
+    if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||start>=24||end<0||end>48||start===end)return false;
+    const overnightEnd=end<start?end+24:end;
+    return (start<window.end&&overnightEnd>window.start)
+      ||(start+24<window.end&&overnightEnd+24>window.start);
+  });
+}
+function happyHourTiming(v){
+  const labels=Object.values(happyHourWindows).filter(window=>hasHappyHourInWindow(v,window)).map(window=>window.label);
+  return labels.length?`<small class="happy-hour-timing">${labels.join(' · ')}</small>`:'';
+}
 function isPlaceholderText(value){
   const t=String(value||"").trim().toLowerCase();
   if(!t||t==="—"||t==="-")return true;
@@ -297,9 +341,10 @@ function filtered(){
     if(state.q&&!text.includes(state.q.toLowerCase()))return false;
     if(state.neighborhood!=='all'&&v.neighborhood!==state.neighborhood)return false;
     // Time/open/price filters only make sense for a verified happy hour.
-    if((state.open||state.time==='open'||state.time==='late'||state.price!=='any')&&knowledge!=='verified')return false;
+    if((state.open||state.time!=='any'||state.price!=='any')&&knowledge!=='verified')return false;
     if((state.open||state.time==='open')&&statusFor(v).key!=='open')return false;
-    if(state.time==='late'&&!isLate(v))return false;
+    const timeWindow=happyHourWindows[state.time];
+    if(timeWindow&&!hasHappyHourInWindow(v,timeWindow))return false;
     if(state.price!=='any'&&!(v.beer&&v.beer<=Number(state.price)))return false;
     return true;
   });
@@ -437,7 +482,7 @@ function cardHTML(v,full=false){
   if(knowledge==='checking'){
     return `<article class="venue-row venue-row-checking${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar checking">?</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>Known venue</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>Being checked</strong></div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>Not verified yet</div><div class="venue-cell"><span class="mobile-label">Food deal</span>Not verified yet</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span><span>Happy-hour details not verified yet</span></div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status checking">? Checking</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button>${v.source&&v.source!=='#'?`<a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Check ${v.name}">›</a>`:''}</div></article>`;
   }
-  const s=statusFor(v);return `<article class="venue-row${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>${accuracyFeedback(v)}</div></article>`}
+  const s=statusFor(v);return `<article class="venue-row${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><strong>${v.early}</strong>${v.late!=='—'?`<small>${v.late}</small>`:''}${happyHourTiming(v)}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>${accuracyFeedback(v)}</div></article>`}
 function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
 function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')}
 function render(){const list=filtered();const pending=pendingCountForMarket();const verified=completeVenuesForMarket().length;const none=verifiedNoHappyHourForMarket().length;resultCount.textContent=list.length;const meta=resultCount.parentElement;if(meta){meta.querySelectorAll('.pending-check').forEach(el=>el.remove());const span=document.createElement('span');span.className='pending-check';span.textContent=` · ${verified} verified${none?` · ${none} no happy hour`:''}${pending?` · ${pending} being checked`:''}`;meta.appendChild(span)}grid.innerHTML=list.length?listHTML(list,false):'<div class="empty-results">No venues match these filters yet.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div class="empty-results">No venues match these filters yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }

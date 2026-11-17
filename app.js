@@ -858,30 +858,33 @@ function escapeAttr(s){
 }
 
 function markerPresentation(v,status,coords,pinId){
+  const markerClass=v.sponsored?'happyhr-marker-icon sponsored-marker-icon':'happyhr-marker-icon';
+  const sponsoredPin=v.sponsored?' sponsored-map-pin':'';
+  const sponsoredBadge=v.sponsored?'<span class="popup-sponsored-label">Sponsored</span>':'';
   if(status==='verified'){
     const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
     return {
-      className:`happyhr-marker-icon${v.sponsored?' sponsored-marker-icon':''}`,
-      visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh${v.sponsored?' sponsored-map-pin':''}" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></button>`,
-      popup:`<div class="venue-map-popup">${v.sponsored?'<span class="popup-sponsored-label">Sponsored</span>':''}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
+      className:markerClass,
+      visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></button>`,
+      popup:`<div class="venue-map-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:v.sponsored?360:200,
       opacity:1
     };
   }
   if(status==='none'){
     return {
-      className:'happyhr-marker-icon',
-      visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
-      popup:`<div class="venue-map-popup no-hh-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
-      z:-50,
+      className:markerClass,
+      visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
+      popup:`<div class="venue-map-popup no-hh-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
+      z:v.sponsored?360:-50,
       opacity:1
     };
   }
   return {
-    className:'happyhr-marker-icon',
-    visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult unverified-venue-pin" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
-    popup:`<div class="venue-map-popup checking-popup"><strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour not verified</b><span>This venue is in our dataset, but we have not confirmed a current happy hour yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
-    z:-50,
+    className:markerClass,
+    visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult unverified-venue-pin${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
+    popup:`<div class="venue-map-popup checking-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour not verified</b><span>This venue is in our dataset, but we have not confirmed a current happy hour yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
+    z:v.sponsored?360:-50,
     opacity:1
   };
 }

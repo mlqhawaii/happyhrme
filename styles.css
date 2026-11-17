@@ -24,7 +24,7 @@
 /* Interactive Oʻahu map — sharp, clickable, and contained */
 .map-panel{position:relative;height:660px;overflow:hidden;background:#0b435d}
 #map{position:absolute;inset:0;width:100%;height:100%;z-index:1}
-.map-badge{z-index:500}
+.map-badge{z-index:500;pointer-events:none}
 .recenter-btn{position:absolute;left:18px;bottom:18px;z-index:500;border:1px solid rgba(255,255,255,.35);background:rgba(9,30,42,.88);color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;backdrop-filter:blur(8px)}
 .region-marker{background:transparent!important;border:0!important}
 .region-pin{cursor:pointer;display:flex;align-items:center;gap:8px;background:#0b2736;color:#fff;border:2px solid #19aaa6;box-shadow:0 4px 16px rgba(0,0,0,.35);border-radius:13px;padding:7px 10px;white-space:nowrap}
@@ -718,3 +718,6 @@ button.happyhr-pin-link{
 }
 
 .venue-hours{font-weight:700}.venue-cell .prime-hours{font-weight:800;font-style:italic;color:var(--teal-dark)}
+
+/* The visible pin can extend outside the marker box when scaled. */
+.leaflet-marker-icon.happyhr-marker-icon .happyhr-pin-link .adult-map-pin{pointer-events:auto!important}

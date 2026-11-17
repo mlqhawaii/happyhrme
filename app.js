@@ -982,14 +982,7 @@ function createVenueMarker(v,coords,status){
   wireVenueMarker(marker,v);
   mapPinRegistry.set(pinId,{marker,venue:v});
   marker.addTo(hhMap);
-  const button=marker.getElement()?.querySelector('.happyhr-pin-link');
-  if(button){
-    L.DomEvent.disableClickPropagation(button);
-    button.addEventListener('click',event=>{
-      event.stopPropagation();
-      activateVenueMarker(marker,v);
-    });
-  }
+  L.DomEvent.disableClickPropagation(marker.getElement());
   regionMarkers.push(marker);
 
   const key=overlapBucketKey(trueCoords);
@@ -1094,6 +1087,17 @@ function initMap(){
     maxZoom:19,
     attribution:'Tiles © Esri'
   }).addTo(hhMap);
+
+  // Handle the button and its Leaflet wrapper before Leaflet's popup click
+  // handler can toggle it. Delegation also covers replaced marker elements.
+  hhMap.getContainer().addEventListener('click',event=>{
+    const wrapper=event.target.closest('.happyhr-marker-icon');
+    const button=wrapper?.querySelector('.happyhr-pin-link');
+    const entry=mapPinRegistry.get(button?.dataset.pinId);
+    if(!entry)return;
+    event.stopPropagation();
+    activateVenueMarker(entry.marker,entry.venue);
+  },true);
 
   // Give users a pointer cursor whenever they are actually within clicking
   // distance of a venue pin, regardless of the marker DOM underneath.

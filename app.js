@@ -972,7 +972,13 @@ function createVenueMarker(v,coords,status){
     interactive:true,
     keyboard:true,
     bubblingMouseEvents:false
-  }).bindPopup(p.popup,{maxWidth:260});
+  }).bindPopup(p.popup,{
+    maxWidth:260,
+    maxHeight:200,
+    autoPan:true,
+    autoPanPaddingTopLeft:[18,68],
+    autoPanPaddingBottomRight:[18,62]
+  });
   wireVenueMarker(marker,v);
   mapPinRegistry.set(pinId,{marker,venue:v});
   marker.addTo(hhMap);

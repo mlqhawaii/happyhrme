@@ -435,7 +435,6 @@ function focusVenueFromMap(v){
       // then briefly emphasize the row.
       if(grid) grid.scrollTop=0;
       row.classList.add("map-selected");
-      row.scrollIntoView({behavior:"smooth",block:"nearest"});
       setTimeout(()=>row.classList.remove("map-selected"),2200);
     }
   });
@@ -820,21 +819,13 @@ function nearestVenueMarkerFromContainerPoint(point,maxDistance=28){
   return best;
 }
 
-function installMapPinDelegation(){
-  // Interaction is installed on the Leaflet map itself in initMap().
-  // Venue marker DOM is deliberately non-interactive so tiles/markers cannot
-  // steal clicks from one another.
-}
 function activateVenueMarker(marker,v){
-  // Keep every map marker behavior identical regardless of how its coordinates were obtained.
-  try{marker.openPopup()}catch(e){}
+  try{history.replaceState(null,'',venuePinHref(v))}catch(e){}
+  marker.openPopup();
   track('map_venue_click',{market:state.island,venue:v.name,area:areaLabel(v)});
   focusVenueFromMap(v);
 }
 function wireVenueMarker(marker,v){
-  // Leaflet click remains as a fallback. Primary interaction comes from the
-  // native button + delegated map handler installed in installMapPinDelegation().
-  marker.on('click',()=>activateVenueMarker(marker,v));
   marker.on('popupopen',()=>{
     const popupEl=marker.getPopup()?.getElement?.();
     const ride=popupEl?.querySelector('.ride-link');
@@ -887,12 +878,13 @@ function markerPresentation(v,status,coords,pinId){
   const markerClass=v.sponsored?'happyhr-marker-icon sponsored-marker-icon':'happyhr-marker-icon';
   const sponsoredPin=v.sponsored?' sponsored-map-pin':'';
   const sponsoredBadge=v.sponsored?'<span class="popup-sponsored-label">Sponsored</span>':'';
+  const address=v.address?`<small>${escapeAttr(v.address)}</small>`:'';
   if(status==='verified'){
     const sourceLink=(v.source&&v.source!=='#')?`<a href="${v.source}" target="_blank" rel="noopener">Verify details ↗</a>`:'';
     return {
       className:markerClass,
       visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin verified-hh${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face adult-pin-happy"><i></i><b></b><em></em></span></span></button>`,
-      popup:`<div class="venue-map-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
+      popup:`<div class="venue-map-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${escapeAttr(areaLabel(v))}</small>${address}<b>${v.early}${v.late!=='—'?` · ${v.late}`:''}</b>${shortDeal(v)?`<div>${shortDeal(v)}</div>`:''}<div class="popup-actions">${rideButtonHtml(v,coords)}${sourceLink}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:v.sponsored?360:200,
       opacity:1
     };
@@ -901,7 +893,7 @@ function markerPresentation(v,status,coords,pinId){
     return {
       className:markerClass,
       visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face ${v.sponsored?'adult-pin-happy':'adult-pin-sad'}"><i></i><b></b><em></em></span></span></button>`,
-      popup:`<div class="venue-map-popup no-hh-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
+      popup:`<div class="venue-map-popup no-hh-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${escapeAttr(areaLabel(v))}</small>${address}<b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:v.sponsored?360:-50,
       opacity:1
     };
@@ -909,7 +901,7 @@ function markerPresentation(v,status,coords,pinId){
   return {
     className:markerClass,
     visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult unverified-venue-pin${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face ${v.sponsored?'adult-pin-happy':'adult-pin-sad'}"><i></i><b></b><em></em></span></span></button>`,
-    popup:`<div class="venue-map-popup checking-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour not verified</b><span>This venue is in our dataset, but we have not confirmed a current happy hour yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
+    popup:`<div class="venue-map-popup checking-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${escapeAttr(areaLabel(v))}</small>${address}<b>Happy hour not verified</b><span>This venue is in our dataset, but we have not confirmed a current happy hour yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
     z:v.sponsored?360:-50,
     opacity:1
   };
@@ -984,6 +976,14 @@ function createVenueMarker(v,coords,status){
   wireVenueMarker(marker,v);
   mapPinRegistry.set(pinId,{marker,venue:v});
   marker.addTo(hhMap);
+  const button=marker.getElement()?.querySelector('.happyhr-pin-link');
+  if(button){
+    L.DomEvent.disableClickPropagation(button);
+    button.addEventListener('click',event=>{
+      event.stopPropagation();
+      activateVenueMarker(marker,v);
+    });
+  }
   regionMarkers.push(marker);
 
   const key=overlapBucketKey(trueCoords);
@@ -1088,15 +1088,6 @@ function initMap(){
     maxZoom:19,
     attribution:'Tiles © Esri'
   }).addTo(hhMap);
-
-  // One deterministic interaction layer for every venue pin.
-  hhMap.on('click',(e)=>{
-    const point=hhMap.latLngToContainerPoint(e.latlng);
-    const entry=nearestVenueMarkerFromContainerPoint(point,30);
-    if(!entry)return;
-    try{history.replaceState(null,'',venuePinHref(entry.venue))}catch(err){}
-    activateVenueMarker(entry.marker,entry.venue);
-  });
 
   // Give users a pointer cursor whenever they are actually within clicking
   // distance of a venue pin, regardless of the marker DOM underneath.

@@ -75,6 +75,7 @@ function normalizeIsland(value){
 }
 const CURATED_VENUE_COORDS={
   // Verified business/property coordinates. These override imported/geocoder data.
+  "mekiko cantina":[21.3424213,-158.1239475],
   "dixie grill bbq & crab shack":[21.3783436,-157.9351654],
   "lost + found at wayfinder":[21.278807,-157.823260],
   // Mai Tai's Ala Moana is inside Ala Moana Center, Ho'okipa Terrace, 4th floor.
@@ -91,6 +92,7 @@ function curatedVenueCoords(v){
   return Array.isArray(c)&&c.length===2?[Number(c[0]),Number(c[1])]:null;
 }
 const CURATED_VENUE_ADDRESSES={
+  "mekiko cantina":"92-1047 Olani St, Suite 2-101, Kapolei, HI 96707",
   "mai tai’s ala moana":"1450 Ala Moana Blvd, Suite 3247, Honolulu, HI 96814",
   "mai tai's ala moana":"1450 Ala Moana Blvd, Suite 3247, Honolulu, HI 96814",
   "lucky strike honolulu":"1450 Ala Moana Blvd, Suite 3260, Honolulu, HI 96814",
@@ -107,10 +109,27 @@ function hasCuratedVenueAddress(v){
   const key=String(v?.name||v?.venue_name||"").trim().toLowerCase();
   return Boolean(String(v?.address||"").trim() || CURATED_VENUE_ADDRESSES[key]);
 }
-function rowToVenue(row){return {
-  id:row.id,placeId:row.google_place_id,name:row.venue_name,island:normalizeIsland(row.island),city:row.city||"",market:row.market||"",metroSlug:row.metro_slug||"",state:row.state||"",country:row.country||"US",
-  neighborhood:row.neighborhood||row.area||"",area:row.area||row.neighborhood||"",
-  address:curatedVenueAddress(row),latitude:row.latitude==null?null:Number(row.latitude),longitude:row.longitude==null?null:Number(row.longitude),
+function oahuListingArea(row,address){
+  const known={
+    8:{area:'Ala Moana',neighborhood:'Ala Moana'},
+    34:{area:'Aiea',neighborhood:'Central'},
+    427699:{area:'Kapolei',neighborhood:'West Oahu'}
+  };
+  if(known[row.id])return known[row.id];
+  if(row.area&&!/^honolulu$/i.test(row.area.trim()))return null;
+  const city=address.match(/,\s*([^,]+),\s*(?:HI|Hawaii)\s+\d{5}/i)?.[1]?.trim();
+  if(!city||city.toLowerCase()==='honolulu')return null;
+  const region=AREA_REGION_ALIASES.Oahu.find(({words})=>words.some(word=>normalizeGeoText(city)===normalizeGeoText(word)));
+  return {area:city,neighborhood:region?.region||city};
+}
+function rowToVenue(row){
+  const address=curatedVenueAddress(row);
+  const island=normalizeIsland(row.island);
+  const location=island==='Oahu'?oahuListingArea(row,address):null;
+  return {
+  id:row.id,placeId:row.google_place_id,name:row.venue_name,island,city:row.city||"",market:row.market||"",metroSlug:row.metro_slug||"",state:row.state||"",country:row.country||"US",
+  neighborhood:location?.neighborhood||row.neighborhood||row.area||"",area:location?.area||row.area||row.neighborhood||"",
+  address,latitude:row.latitude==null?null:Number(row.latitude),longitude:row.longitude==null?null:Number(row.longitude),
   days:row.days||"Confirm hours",early:row.early_display||"Confirm current hours",late:row.late_display||"—",
   beer:row.cheapest_beer==null?null:Number(row.cheapest_beer),drinks:row.drink_highlight||"—",food:row.food_highlight||"—",dealHighlights:row.deal_highlights||"",
   verification:row.verification||"",noHappyHour:row.no_happy_hour===true||row.verification==="verified_no_happy_hour",
@@ -508,7 +527,7 @@ let hhMap,regionMarkers=[];
 const mapPinRegistry=new Map();
 let mapPinSequence=0;
 function currentRegions(){return islandConfigs[state.island].regions}
-function markerCacheKey(v){return `happyhr:geo:v12:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
+function markerCacheKey(v){return `happyhr:geo:v13:${String(v.id||v.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${state.island}`}
 
 function normalizeGeoText(x){
   return String(x||"").toLowerCase()
@@ -608,46 +627,6 @@ function coordsPassVenueSanity(v,coords){
 }
 
 
-function stableVenueHash(text){
-  let h=2166136261;
-  const s=String(text||'');
-  for(let i=0;i<s.length;i++){
-    h^=s.charCodeAt(i);
-    h=Math.imul(h,16777619);
-  }
-  return h>>>0;
-}
-
-function approximateVenueCoords(v){
-  const cfg=islandConfigs[state.island]||{};
-  const region=expectedRegionForVenue(v);
-  const base=region ? [Number(region.lat),Number(region.long)] :
-    Array.isArray(cfg.center) ? [Number(cfg.center[0]),Number(cfg.center[1])] : null;
-  if(!base||!base.every(Number.isFinite))return null;
-
-  // Spread fallback pins deterministically around the correct neighborhood /
-  // market center so missing geocodes do not stack on one coordinate.
-  const h=stableVenueHash(`${v.id||''}|${v.name||''}|${v.area||''}|${state.island}`);
-  const angle=((h%360)*Math.PI)/180;
-  const fraction=((h>>>8)%1000)/1000;
-
-  // Neighborhood fallbacks stay close to the neighborhood center. Mainland
-  // markets without sub-regions use a slightly wider city-level spread.
-  const radiusKm=region ? (0.55 + fraction*1.35) : (1.2 + fraction*3.8);
-  const dLat=(radiusKm/111)*Math.sin(angle);
-  const cosLat=Math.max(.35,Math.cos(base[0]*Math.PI/180));
-  const dLng=(radiusKm/(111*cosLat))*Math.cos(angle);
-  const candidate=[base[0]+dLat,base[1]+dLng];
-
-  // Keep approximate fallback inside the configured market bounds.
-  if(Array.isArray(cfg.bounds)){
-    const [[south,west],[north,east]]=cfg.bounds;
-    candidate[0]=Math.min(north-.002,Math.max(south+.002,candidate[0]));
-    candidate[1]=Math.min(east-.002,Math.max(west+.002,candidate[1]));
-  }
-  return candidate;
-}
-
 function expectedSearchExtent(v){
   const cfg=islandConfigs[state.island]||{};
   const region=expectedRegionForVenue(v);
@@ -728,6 +707,12 @@ async function runArcgisVenueLookup(v,lookup,extent,useExtent=true){
     if(!c?.location)continue;
     const score=Number(c.score||0);
     if(score<lookup.minScore)continue;
+    const type=c.attributes?.Addr_type;
+    if(lookup.mode==='address'){
+      if(!['PointAddress','Subaddress'].includes(type))continue;
+    }else if(type!=='POI'||normalizeGeoText(c.attributes?.PlaceName)!==normalizeGeoText(v.name)){
+      continue;
+    }
     const coords=[Number(c.location.y),Number(c.location.x)];
     if(!coordsPassVenueSanity(v,coords))continue;
     return {coords,score,match:c.address||'',mode:lookup.mode};
@@ -747,17 +732,7 @@ async function geocodeVenue(v){
     // First attempt: neighborhood-biased lookup.
     let hit=await runArcgisVenueLookup(v,lookup,extent,true);
 
-    // Second attempt: broader market lookup. This recovers real venues that
-    // ArcGIS scores below the stricter local attempt while still requiring
-    // the result to pass our market/area sanity test.
-    if(!hit){
-      const broader={
-        ...lookup,
-        minScore: lookup.mode==='address' ? 65 : 74,
-        mode:`${lookup.mode}-broad`
-      };
-      hit=await runArcgisVenueLookup(v,broader,extent,false);
-    }
+    if(!hit)hit=await runArcgisVenueLookup(v,lookup,extent,false);
 
     if(!hit)return null;
 
@@ -874,7 +849,7 @@ function markerPresentation(v,status,coords,pinId){
   if(status==='none'){
     return {
       className:markerClass,
-      visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
+      visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face ${v.sponsored?'adult-pin-happy':'adult-pin-sad'}"><i></i><b></b><em></em></span></span></button>`,
       popup:`<div class="venue-map-popup no-hh-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>No current happy hour</b><span>Verified by HappyHr.Me</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
       z:v.sponsored?360:-50,
       opacity:1
@@ -882,7 +857,7 @@ function markerPresentation(v,status,coords,pinId){
   }
   return {
     className:markerClass,
-    visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult unverified-venue-pin${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face adult-pin-sad"><i></i><b></b><em></em></span></span></button>`,
+    visual:`<button class="happyhr-pin-link" type="button" data-pin-id="${pinId}" aria-label="Show ${escapeAttr(v.name)} details"><span class="adult-map-pin no-hh-adult unverified-venue-pin${sponsoredPin}" aria-hidden="true"><span class="adult-pin-face ${v.sponsored?'adult-pin-happy':'adult-pin-sad'}"><i></i><b></b><em></em></span></span></button>`,
     popup:`<div class="venue-map-popup checking-popup">${sponsoredBadge}<strong>${v.name}</strong><small>${areaLabel(v)}</small><b>Happy hour not verified</b><span>This venue is in our dataset, but we have not confirmed a current happy hour yet.</span><div class="popup-actions">${rideButtonHtml(v,coords)}<button class="popup-claim" type="button" data-popup-claim="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-popup-claim-key="${venueSelectionKey(v)}" data-popup-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim venue</button></div></div>`,
     z:v.sponsored?360:-50,
     opacity:1
@@ -1001,22 +976,11 @@ async function renderMapMarkers(){
 
   const unresolved=[];
 
-  // Every listing gets a marker immediately. Trusted coordinates are used
-  // directly; otherwise a deterministic neighborhood/city fallback is used.
+  // Leave unresolved venues in the list while looking up their locations.
   groups.forEach(([list,adder])=>list.forEach(v=>{
-    try{
-      const exact=cachedVenueCoords(v);
-      if(exact){
-        adder(v,exact);
-        return;
-      }
-      const fallback=approximateVenueCoords(v);
-      const fallbackMarker=fallback?adder(v,fallback):null;
-      unresolved.push([v,adder,fallbackMarker]);
-    }catch(e){
-      console.warn('HappyHr could not create immediate marker for',v?.name,e);
-      unresolved.push([v,adder,null]);
-    }
+    const exact=cachedVenueCoords(v);
+    if(exact)adder(v,exact);
+    else unresolved.push([v,adder]);
   }));
 
   fitCurrentIsland();
@@ -1024,21 +988,16 @@ async function renderMapMarkers(){
   const initialZoom = hhMap.getZoom();
   const initialArea = state.neighborhood;
 
-  // Upgrade approximate pins to exact geocoded coordinates in the background.
-  // A failed lookup leaves the fallback marker in the correct neighborhood
-  // instead of hiding the venue.
-  for(const [v,adder,fallbackMarker] of unresolved){
+  // Add a pin once its location passes the geocoder checks.
+  for(const [v,adder] of unresolved){
     if(renderMapMarkers.token!==renderToken)return;
     try{
       const exact=await geocodeVenue(v);
       if(exact&&renderMapMarkers.token===renderToken){
-        if(fallbackMarker){
-          try{hhMap.removeLayer(fallbackMarker)}catch(e){}
-        }
         adder(v,exact);
       }
     }catch(e){
-      console.warn('HappyHr kept approximate marker for',v?.name,e);
+      console.warn('HappyHr could not place',v?.name,e);
     }
     // Small stagger avoids hammering the public geocoder.
     await new Promise(r=>setTimeout(r,35));

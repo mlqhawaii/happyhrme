@@ -515,10 +515,61 @@ function cardHTML(v,full=false){
   return `<article class="venue-row${v.sponsored?' venue-row-sponsored':''}" data-venue-key="${venueSelectionKey(v)}"><div class="venue-main"><div class="venue-avatar state-avatar verified">🙂</div><div>${sponsoredLabel(v)}<h3>${v.name}</h3><p>${v.days}</p></div></div><div class="venue-cell"><span class="mobile-label">Area</span><strong>${v.area}</strong></div><div class="venue-cell"><span class="mobile-label">Happy hour</span><span class="venue-hours">${prime?highlightPrimeHours(v.early):v.early}</span>${v.late!=='—'?`<small>${prime?highlightPrimeHours(v.late):v.late}</small>`:''}${happyHourTiming(v)}</div>${full?`<div class="venue-cell"><span class="mobile-label">Drink deal</span>${v.drinks}</div><div class="venue-cell"><span class="mobile-label">Food deal</span>${v.food}</div>`:`<div class="venue-cell deal-stack"><span class="mobile-label">Deals</span>${shortDeal(v)}</div>`}<div class="venue-status"><span class="mobile-label">Status</span><span class="status verified-hh-status">🙂 Verified</span></div><div class="venue-link"><button class="claim-inline" type="button" data-claim-venue="${String(v.name||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}" data-claim-key="${venueSelectionKey(v)}" data-claim-area="${String(areaLabel(v)||'').replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}">Claim</button><a class="source-link" href="${v.source}" target="_blank" rel="noopener" data-venue="${v.name}" aria-label="Verify ${v.name}">›</a>${accuracyFeedback(v)}</div></article>`}
 function areaLabel(v){return String(v.area||v.neighborhood||'Other area').trim()||'Other area'}
 function listHTML(list,full=false){return list.map(v=>cardHTML(v,full)).join('')}
-function render(){const list=filtered();const pending=pendingCountForMarket();const verified=completeVenuesForMarket().length;const none=verifiedNoHappyHourForMarket().length;resultCount.textContent=list.length;const meta=resultCount.parentElement;if(meta){meta.querySelectorAll('.pending-check').forEach(el=>el.remove());const span=document.createElement('span');span.className='pending-check';span.textContent=` · ${verified} verified${none?` · ${none} no happy hour`:''}${pending?` · ${pending} being checked`:''}`;meta.appendChild(span)}grid.innerHTML=list.length?listHTML(list,false):'<div class="empty-results">No venues match these filters yet.</div>';fullGrid.innerHTML=list.length?listHTML(list,true):'<div class="empty-results">No venues match these filters yet.</div>';byId('localClock').textContent=marketNow().label;document.querySelectorAll('.source-link').forEach(a=>a.addEventListener('click',()=>track('venue_source_click',{venue:a.dataset.venue,island:state.island}))) }
+function venuesInMapBounds(list,bounds,entries){
+  const visible=new Set();
+  for(const {marker,venue} of entries){
+    if(bounds.contains(marker.getLatLng()))visible.add(venue);
+  }
+  return list.filter(venue=>visible.has(venue));
+}
+function renderResultsSummary(list){
+  const counts={verified:0,none:0,checking:0};
+  for(const venue of list)counts[venueKnowledgeState(venue)]++;
+  resultCount.textContent=list.length;
+  const meta=resultCount.parentElement;
+  if(!meta)return;
+  let detail=meta.querySelector('.pending-check');
+  if(!detail){
+    detail=document.createElement('span');
+    detail.className='pending-check';
+    meta.appendChild(detail);
+  }
+  const {verified,none,checking}=counts;
+  detail.textContent=` · ${verified} verified${none?` · ${none} no happy hour`:''}${checking?` · ${checking} being checked`:''}`;
+}
+function renderResultRows(container,list,full,empty){
+  container.innerHTML=list.length?listHTML(list,full):`<div class="empty-results">${empty}</div>`;
+}
+function renderMapResults(list=filtered()){
+  const bounds=hhMap?.getContainer().clientWidth?hhMap.getBounds():null;
+  const visible=bounds?venuesInMapBounds(list,bounds,mapPinRegistry.values()):list;
+  renderResultRows(grid,visible,false,bounds?'No matching venues in this map area. Pan or zoom out to see more.':'No venues match these filters yet.');
+  if(state.view==='map')renderResultsSummary(visible);
+}
+let mapResultsFrame=null;
+function scheduleMapResults(){
+  if(state.view!=='map'||mapResultsFrame!==null)return;
+  mapResultsFrame=requestAnimationFrame(()=>{
+    mapResultsFrame=null;
+    if(state.view==='map')renderMapResults();
+  });
+}
+function render(){
+  const list=filtered();
+  renderMapResults(list);
+  renderResultRows(fullGrid,list,true,'No venues match these filters yet.');
+  if(state.view==='list')renderResultsSummary(list);
+  byId('localClock').textContent=marketNow().label;
+}
+for(const container of [grid,fullGrid]){
+  container.addEventListener('click',event=>{
+    const link=event.target.closest('.source-link');
+    if(link)track('venue_source_click',{venue:link.dataset.venue,island:state.island});
+  });
+}
 function sync(){const sel=byId('islandFilter');if(sel&&[...sel.options].some(o=>o.value===state.island))sel.value=state.island;byId('neighborhoodFilter').value=state.neighborhood;byId('timeFilter').value=state.time;byId('priceFilter').value=state.price;byId('openNowFilter').checked=state.open;byId('sortSelect').value=state.sort;byId('searchInput').value=state.q;byId('headerSearch').value=state.q}
 function clearFilters(){Object.assign(state,{q:"",neighborhood:"all",open:false,price:"any",time:"any",sort:"recommended"});sync();render();renderCoverage();fitCurrentIsland();track('filters_cleared',{island:state.island})}
-function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');if(mode==='map'&&hhMap)setTimeout(()=>{hhMap.invalidateSize();fitCurrentIsland()},80);track('view_change',{view:mode,island:state.island})}
+function setView(mode){state.view=mode;byId('mapViewBtn').classList.toggle('active',mode==='map');byId('listViewBtn').classList.toggle('active',mode==='list');byId('mapMode').classList.toggle('hidden',mode!=='map');byId('listMode').classList.toggle('hidden',mode!=='list');render();if(mode==='map'&&hhMap)setTimeout(()=>{hhMap.invalidateSize();fitCurrentIsland()},80);track('view_change',{view:mode,island:state.island})}
 function updateContextText(){const label=islandNames[state.island]||islandConfigs[state.island]?.label||state.island;byId('cityPill').textContent=`${label} ▾`;byId('heroEyebrow').textContent=`${label.toUpperCase()} · VERIFIED HAPPY HOURS`;byId('heroDescription').textContent=`Find current drink and food deals around ${label} — by area, time and price.`;byId('mapBadgeTitle').textContent=label;byId('resultsTitle').textContent=`Deals around ${label}`;byId('fullListTitle').textContent=`All ${label} happy hours`;buildAreaOptions()}
 function buildAreaOptions(){const select=byId('neighborhoodFilter'),cfg=islandConfigs[state.island];const regions=(cfg?.regions||[]).filter(r=>r.key!=='__market__');select.innerHTML='<option value="all">⌖ All areas</option>'+regions.map(r=>`<option value="${r.key}">${r.label}</option>`).join('');}
 function setIsland(island){if(!islandConfigs[island])return;state.island=island;state.neighborhood='all';updateContextText();sync();render();renderCoverage();renderMapMarkers();closeModal();history.replaceState(null,'',`${location.pathname}?${['Oahu','Maui','Kauai','Hawaii'].includes(island)?'island':'market'}=${encodeURIComponent(island)}`);track('market_select',{market:island})}
@@ -941,6 +992,7 @@ function createVenueMarker(v,coords,status){
   bucket.push(bucketEntry);
   overlapPinBuckets.set(key,bucket);
   reflowOverlapBucket(key);
+  if(hhMap.getBounds().contains(marker.getLatLng()))scheduleMapResults();
 
   marker.on('remove',()=>{
     mapPinRegistry.delete(pinId);
@@ -984,6 +1036,7 @@ async function renderMapMarkers(){
   }));
 
   fitCurrentIsland();
+  scheduleMapResults();
   const initialCenter = hhMap.getCenter();
   const initialZoom = hhMap.getZoom();
   const initialArea = state.neighborhood;
@@ -1030,6 +1083,7 @@ function fitCurrentIsland() {
 function initMap(){
   if(!window.L||hhMap)return;
   hhMap=L.map('map',{zoomControl:true,scrollWheelZoom:true,attributionControl:true});
+  hhMap.on('moveend zoomend resize',scheduleMapResults);
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
     maxZoom:19,
     attribution:'Tiles © Esri'

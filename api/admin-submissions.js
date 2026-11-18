@@ -7,10 +7,10 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const status = String(req.query.status || 'pending');
-  const type = String(req.query.type || 'all');
+  const type = String(req.query.type || 'claim');
 
   const filters = [
-    'select=id,submission_type,venue_name,market,area,address,details,source_url,submitter_contact,status,admin_notes,created_at,venue_key,owner_name,owner_role,owner_phone,plan_requested,plan_status,stripe_customer_id,stripe_subscription_id,stripe_current_period_end',
+    'select=id,submission_type,venue_name,market,area,address,details,source_url,submitter_contact,status,admin_notes,created_at,venue_key,owner_name,owner_role,owner_phone,plan_requested,plan_status,stripe_customer_id,stripe_subscription_id,stripe_current_period_end,automation_state,automation_error',
     'order=created_at.desc',
     'limit=250'
   ];

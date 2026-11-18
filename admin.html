@@ -42,7 +42,7 @@ button{cursor:pointer}.card{background:#fff;border:1px solid var(--line);border-
 
 <div id="adminView" class="wrap" hidden>
   <div class="top">
-    <div><div class="brand">HappyHr<span>.Me</span> Admin</div><div class="meta">Community moderation queue</div></div>
+    <div><div class="brand">HappyHr<span>.Me</span> Admin</div><div class="meta">Ownership approvals and automatic deal checks</div></div>
     <button id="logoutBtn" class="btn secondary">Log out</button>
   </div>
 
@@ -58,17 +58,19 @@ button{cursor:pointer}.card{background:#fff;border:1px solid var(--line);border-
     </label>
     <label>Type
       <select id="typeFilter">
-        <option value="all">All</option>
+        <option value="claim">Ownership claims — approval needed</option>
+        <option value="all">All activity</option>
         <option value="new_venue">New venues</option>
         <option value="correction">Corrections</option>
         <option value="contact">Contact messages</option>
-        <option value="claim">Venue claims</option>
+
       </select>
     </label>
     <button id="refreshBtn" class="btn secondary">Refresh</button>
     <span id="count" class="meta"></span>
   </div>
 
+  <div id="automationSummary" class="card meta" style="padding:18px;margin-bottom:16px">Loading automatic verification status…</div>
   <div id="queue" class="queue"></div>
 </div>
 
@@ -128,6 +130,7 @@ statusFilter.addEventListener('change',loadQueue);
 typeFilter.addEventListener('change',loadQueue);
 
 async function loadQueue(){
+  fetch('/api/admin-automation-status',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(s=>{if(s)document.getElementById('automationSummary').textContent=`Automatic deal checks: ${s.queued} queued · ${s.retry} waiting for another source check · ${s.processing} processing · ${s.published} published. Routine updates require no approval. Last check: ${s.last_check?fmtDate(s.last_check):'not run yet'}.`;}).catch(()=>{document.getElementById('automationSummary').textContent='Automatic verification status unavailable. Refresh to try again.'});
   queue.innerHTML='<div class="empty">Loading…</div>';
   let r;
   try{r=await fetch(`/api/admin-submissions?status=${encodeURIComponent(statusFilter.value)}&type=${encodeURIComponent(typeFilter.value)}`,{cache:'no-store'});}catch{queue.innerHTML='<div class="empty">Connection failed. Use Refresh to try again.</div>';return}
@@ -135,7 +138,7 @@ async function loadQueue(){
   const rows=await r.json().catch(()=>[]);
   if(!r.ok){queue.innerHTML=`<div class="empty">${esc(rows.error||'Could not load queue')}</div>`;return}
   count.textContent=`${rows.length} item${rows.length===1?'':'s'}`;
-  if(!rows.length){queue.innerHTML='<div class="empty card">Nothing in this queue.</div>';return}
+  if(!rows.length){queue.innerHTML='<div class="empty card">No items need approval in this queue.</div>';return}
   queue.innerHTML=rows.map(row=>`
     <article class="item" data-id="${row.id}">
       <div class="item-head">
@@ -167,11 +170,11 @@ async function loadQueue(){
       <div class="details">${esc(row.details)}</div>
       <textarea class="notes" placeholder="Private admin notes…">${esc(row.admin_notes||'')}</textarea>
       <div class="actions">
-        ${row.submission_type==='claim'?`<select class="claim-plan"><option value="free" ${row.plan_requested==='free'?'selected':''}>Free</option><option value="pro" ${row.plan_requested==='pro'?'selected':''}>Pro $49</option><option value="featured" ${row.plan_requested==='featured'?'selected':''}>Featured $99</option></select><select class="claim-plan-status"><option value="lead" ${row.plan_status==='lead'?'selected':''}>Lead</option><option value="approved" ${row.plan_status==='approved'?'selected':''}>Approved</option><option value="checkout_started" ${row.plan_status==='checkout_started'?'selected':''}>Checkout started</option><option value="active" ${row.plan_status==='active'?'selected':''}>Active</option><option value="past_due" ${row.plan_status==='past_due'?'selected':''}>Past due</option><option value="canceled" ${row.plan_status==='canceled'?'selected':''}>Canceled</option></select><button class="btn" data-save-claim>Save plan</button>`:(row.submission_type!=='contact'?`<button class="btn" data-enrich>Verify & enrich</button>`:'')}
+        ${['new_venue','venue','correction'].includes(row.submission_type)?`<p class="meta">Automatic verification: ${esc(row.automation_state||'queued')}. ${esc(row.automation_error||'No approval needed.')}</p>`:`${row.submission_type==='claim'?`<select class="claim-plan"><option value="free" ${row.plan_requested==='free'?'selected':''}>Free</option><option value="pro" ${row.plan_requested==='pro'?'selected':''}>Pro $49</option><option value="featured" ${row.plan_requested==='featured'?'selected':''}>Featured $99</option></select><select class="claim-plan-status"><option value="lead" ${row.plan_status==='lead'?'selected':''}>Lead</option><option value="approved" ${row.plan_status==='approved'?'selected':''}>Approved</option><option value="checkout_started" ${row.plan_status==='checkout_started'?'selected':''}>Checkout started</option><option value="active" ${row.plan_status==='active'?'selected':''}>Active</option><option value="past_due" ${row.plan_status==='past_due'?'selected':''}>Past due</option><option value="canceled" ${row.plan_status==='canceled'?'selected':''}>Canceled</option></select><button class="btn" data-save-claim>Save plan</button>`:(row.submission_type!=='contact'?`<button class="btn" data-enrich>Verify & enrich</button>`:'')}
         <button class="btn secondary" data-status="reviewed">Approve / reviewed</button>
         <button class="btn" data-status="applied">Mark applied</button>
         <button class="btn danger" data-status="rejected">Reject</button>
-        <button class="btn secondary" data-status="pending">Return to pending</button>
+        <button class="btn secondary" data-status="pending">Return to pending</button>`}
       </div>
       <div class="enrich-box"></div>
     </article>

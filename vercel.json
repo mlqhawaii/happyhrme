@@ -105,5 +105,11 @@
       "source": "/new-orleans",
       "destination": "/?market=new-orleans"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/automatic-deal-checks",
+      "schedule": "0 22 * * *"
+    }
   ]
 }

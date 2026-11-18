@@ -108,7 +108,7 @@
   ],
   "crons": [
     {
-      "path": "/api/automatic-deal-checks",
+      "path": "/api/admin-enrich-submission?automatic=1",
       "schedule": "0 22 * * *"
     }
   ]

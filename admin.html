@@ -130,7 +130,7 @@ statusFilter.addEventListener('change',loadQueue);
 typeFilter.addEventListener('change',loadQueue);
 
 async function loadQueue(){
-  fetch('/api/admin-automation-status',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(s=>{if(s)document.getElementById('automationSummary').textContent=`Automatic deal checks: ${s.queued} queued · ${s.retry} waiting for another source check · ${s.processing} processing · ${s.published} published. Routine updates require no approval. Last check: ${s.last_check?fmtDate(s.last_check):'not run yet'}.`;}).catch(()=>{document.getElementById('automationSummary').textContent='Automatic verification status unavailable. Refresh to try again.'});
+  fetch('/api/admin-submissions?summary=1',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(s=>{if(s)document.getElementById('automationSummary').textContent=`Automatic deal checks: ${s.queued} queued · ${s.retry} waiting for another source check · ${s.processing} processing · ${s.published} published. Routine updates require no approval. Last check: ${s.last_check?fmtDate(s.last_check):'not run yet'}.`;}).catch(()=>{document.getElementById('automationSummary').textContent='Automatic verification status unavailable. Refresh to try again.'});
   queue.innerHTML='<div class="empty">Loading…</div>';
   let r;
   try{r=await fetch(`/api/admin-submissions?status=${encodeURIComponent(statusFilter.value)}&type=${encodeURIComponent(typeFilter.value)}`,{cache:'no-store'});}catch{queue.innerHTML='<div class="empty">Connection failed. Use Refresh to try again.</div>';return}
